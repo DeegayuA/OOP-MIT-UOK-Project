@@ -24,7 +24,7 @@ class MainWindow(tk.Frame):
         inventory_button = ttk.Button(nav_frame, text="Inventory", command=self.app_controller.show_inventory_view)
         inventory_button.pack(side=tk.LEFT, padx=5)
 
-        sales_button = ttk.Button(nav_frame, text="Sales")
+        sales_button = ttk.Button(nav_frame, text="Sales", command=self.app_controller.show_sales_view)
         sales_button.pack(side=tk.LEFT, padx=5)
 
         orders_button = ttk.Button(nav_frame, text="Orders")

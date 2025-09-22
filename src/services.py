@@ -17,6 +17,127 @@ def log_activity(user_id, action_description):
     finally:
         conn.close()
 
+def create_sale(user_id, customer_id, cart):
+    """
+    Creates a new sale, updating batch quantities transactionally.
+    `cart` is a list of dictionaries, e.g., [{'product_id': 1, 'quantity': 2}, ...]
+    """
+    conn = get_db_connection()
+    try:
+        total_amount = 0
+
+        # First, calculate total amount and check stock availability
+        for item in cart:
+            product_id = item['product_id']
+            quantity_to_sell = item['quantity']
+
+            batches = get_batches_for_product(product_id)
+            if not batches:
+                raise ValueError(f"No batches available for product ID {product_id}")
+
+            total_stock = sum(b['quantity'] for b in batches)
+            if total_stock < quantity_to_sell:
+                raise ValueError(f"Not enough stock for product ID {product_id}. Available: {total_stock}, Requested: {quantity_to_sell}")
+
+            # The price is determined by the first batch we'd sell from
+            total_amount += batches[0]['selling_price'] * quantity_to_sell
+
+        # --- Begin Transaction ---
+        cursor = conn.cursor()
+
+        # 1. Create the sale record
+        cursor.execute(
+            "INSERT INTO sales (user_id, customer_id, total_amount) VALUES (?, ?, ?)",
+            (user_id, customer_id, total_amount)
+        )
+        sale_id = cursor.lastrowid
+
+        # 2. Add sale items and update batch quantities
+        for item in cart:
+            product_id = item['product_id']
+            quantity_to_sell = item['quantity']
+
+            # Get batches again, this time for updating (ordered by expiry)
+            batches = get_batches_for_product(product_id)
+
+            for batch in batches:
+                if quantity_to_sell == 0:
+                    break
+
+                sell_from_this_batch = min(quantity_to_sell, batch['quantity'])
+
+                # Insert sale item record
+                cursor.execute(
+                    "INSERT INTO sale_items (sale_id, batch_id, quantity_sold, price_per_unit) VALUES (?, ?, ?, ?)",
+                    (sale_id, batch['batch_id'], sell_from_this_batch, batch['selling_price'])
+                )
+
+                # Update batch quantity
+                new_quantity = batch['quantity'] - sell_from_this_batch
+                cursor.execute(
+                    "UPDATE batches SET quantity = ? WHERE batch_id = ?",
+                    (new_quantity, batch['batch_id'])
+                )
+
+                quantity_to_sell -= sell_from_this_batch
+
+        conn.commit()
+        log_activity(user_id, f"Created new sale with ID {sale_id}.")
+        return sale_id
+
+    except (sqlite3.Error, ValueError) as e:
+        conn.rollback()
+        print(f"Sale creation failed. Rolled back transaction. Error: {e}")
+        raise e # Re-raise the exception to be caught by the UI layer
+    finally:
+        conn.close()
+
+# --- Sales Management Services ---
+
+def get_all_customers():
+    """Retrieves all customers from the database."""
+    conn = get_db_connection()
+    try:
+        cursor = conn.execute("SELECT customer_id, name, contact_info FROM customers ORDER BY name")
+        customers = cursor.fetchall()
+        return [dict(row) for row in customers]
+    finally:
+        conn.close()
+
+def get_products_for_sale():
+    """
+    Retrieves all products that are available for sale.
+    An available product has at least one batch with quantity > 0.
+    The price is determined by the batch that will expire first (FIFO/FEFO).
+    """
+    conn = get_db_connection()
+    try:
+        # This query finds the earliest-expiring batch with stock for each product
+        # and joins it with the product information.
+        cursor = conn.execute("""
+            SELECT
+                p.product_id,
+                p.name,
+                p.category,
+                b.selling_price
+            FROM products p
+            JOIN (
+                SELECT
+                    product_id,
+                    MIN(expiry_date) as min_expiry_date
+                FROM batches
+                WHERE quantity > 0
+                GROUP BY product_id
+            ) as earliest_exp_batch ON p.product_id = earliest_exp_batch.product_id
+            JOIN batches b ON p.product_id = b.product_id AND b.expiry_date = earliest_exp_batch.min_expiry_date
+            WHERE b.quantity > 0
+            ORDER BY p.name
+        """)
+        products = cursor.fetchall()
+        return [dict(row) for row in products]
+    finally:
+        conn.close()
+
 def authenticate_user(username, password):
     """
     Authenticates a user.

@@ -3,6 +3,7 @@ from database import initialize_database
 from gui.login_window import LoginWindow
 from gui.main_window import MainWindow
 from gui.inventory_view import InventoryView
+from gui.sales_view import SalesView
 
 class App(tk.Tk):
     def __init__(self):
@@ -48,6 +49,14 @@ class App(tk.Tk):
             self.current_frame.destroy()
 
         self.current_frame = InventoryView(self, app_controller=self)
+        self.current_frame.pack(fill=tk.BOTH, expand=True)
+
+    def show_sales_view(self):
+        """Shows the sales view."""
+        if self.current_frame:
+            self.current_frame.destroy()
+
+        self.current_frame = SalesView(self, app_controller=self)
         self.current_frame.pack(fill=tk.BOTH, expand=True)
 
 def main():
