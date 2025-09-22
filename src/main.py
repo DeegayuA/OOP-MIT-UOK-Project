@@ -23,7 +23,8 @@ class App(tk.Tk):
             self.current_frame = None
 
         self.withdraw() # Hide main window
-        login_win = LoginWindow(self, on_success=self.on_login_success)
+        # Keep a reference to the window to prevent it from being garbage collected
+        self.login_win = LoginWindow(self, on_success=self.on_login_success)
 
     def on_login_success(self, user_info):
         """Callback function for when login is successful."""
