@@ -35,7 +35,15 @@ class OrderView(tk.Frame):
         self.orders_tree.pack(fill=tk.BOTH, expand=True)
 
         ttk.Button(button_frame, text="Create New Order", command=self.create_new_order).pack(side=tk.LEFT, padx=5)
-        ttk.Button(button_frame, text="Update Status", command=self.update_status).pack(side=tk.LEFT, padx=5)
+
+        update_status_frame = ttk.Frame(button_frame)
+        update_status_frame.pack(side=tk.LEFT, padx=10)
+        self.status_var = tk.StringVar()
+        status_menu = ttk.Combobox(update_status_frame, textvariable=self.status_var, state="readonly",
+                                    values=['Received', 'Ready to Pack', 'Ready to Distribute', 'Completed'])
+        status_menu.pack(side=tk.LEFT)
+        ttk.Button(update_status_frame, text="Update Status", command=self.update_status).pack(side=tk.LEFT, padx=5)
+
         ttk.Button(button_frame, text="Back to Dashboard", command=self.app_controller.show_main_dashboard).pack(side=tk.RIGHT, padx=5)
 
     def refresh_data(self):
@@ -60,21 +68,19 @@ class OrderView(tk.Frame):
             messagebox.showwarning("Selection Error", "Please select an order to update.")
             return
 
+        new_status = self.status_var.get()
+        if not new_status:
+            messagebox.showwarning("Input Error", "Please select a status from the dropdown.")
+            return
+
         order_id = self.orders_tree.item(selected_item[0])['values'][0]
-        current_status = self.orders_tree.item(selected_item[0])['values'][3]
 
-        statuses = ['Received', 'Ready to Pack', 'Ready to Distribute', 'Completed']
-        new_status = simpledialog.askstring("Update Status", "Enter new status:", initialvalue=current_status, parent=self)
-
-        if new_status and new_status in statuses:
-            try:
-                services.update_order_status(order_id, new_status)
-                messagebox.showinfo("Success", "Order status updated successfully.")
-                self.refresh_data()
-            except Exception as e:
-                messagebox.showerror("Error", f"Failed to update status: {e}")
-        elif new_status:
-            messagebox.showerror("Validation Error", f"Invalid status. Must be one of: {', '.join(statuses)}")
+        try:
+            services.update_order_status(order_id, new_status)
+            messagebox.showinfo("Success", "Order status updated successfully.")
+            self.refresh_data()
+        except Exception as e:
+            messagebox.showerror("Error", f"Failed to update status: {e}")
 
     def create_new_order(self):
         win = CreateOrderWindow(self)
@@ -98,6 +104,7 @@ class CreateOrderWindow(BaseWindow):
         self.customers = services.get_all_customers()
         self.products = services.get_all_products() # Get all products for ordering
         self.create_widgets()
+        self.filter_products()
         self.center_window()
 
     def create_widgets(self):
@@ -116,13 +123,23 @@ class CreateOrderWindow(BaseWindow):
         # Product selection and cart
         product_frame = ttk.LabelFrame(middle_frame, text="Add Products")
         product_frame.pack(side=tk.LEFT, fill=tk.Y, padx=5)
+
+        # Search bar for products
+        search_frame = ttk.Frame(product_frame)
+        search_frame.pack(fill=tk.X, pady=5, padx=5)
+        ttk.Label(search_frame, text="Search:").pack(side=tk.LEFT)
+        self.product_search_var = tk.StringVar()
+        product_search_entry = ttk.Entry(search_frame, textvariable=self.product_search_var)
+        product_search_entry.pack(fill=tk.X, expand=True)
+        product_search_entry.bind("<KeyRelease>", self.filter_products)
+
         cart_frame = ttk.LabelFrame(middle_frame, text="Order Items")
         cart_frame.pack(side=tk.LEFT, fill=tk.BOTH, expand=True, padx=5)
 
         ttk.Label(product_frame, text="Product:").pack()
         self.product_var = tk.StringVar()
-        product_names = [p['name'] for p in self.products]
-        ttk.Combobox(product_frame, textvariable=self.product_var, values=product_names, state="readonly").pack(pady=5)
+        self.product_combobox = ttk.Combobox(product_frame, textvariable=self.product_var, state="readonly")
+        self.product_combobox.pack(pady=5)
 
         ttk.Label(product_frame, text="Quantity:").pack()
         self.quantity_var = tk.IntVar(value=1)
@@ -132,6 +149,11 @@ class CreateOrderWindow(BaseWindow):
         self.cart_tree = ttk.Treeview(cart_frame, columns=("id", "name", "qty"), show="headings")
         self.cart_tree.heading("id", text="ID"); self.cart_tree.heading("name", text="Product"); self.cart_tree.heading("qty", text="Quantity")
         self.cart_tree.pack(fill=tk.BOTH, expand=True)
+
+        cart_buttons_frame = ttk.Frame(cart_frame)
+        cart_buttons_frame.pack(fill=tk.X, pady=5)
+        ttk.Button(cart_buttons_frame, text="Edit Quantity", command=self.edit_quantity).pack(side=tk.LEFT)
+        ttk.Button(cart_buttons_frame, text="Remove from Order", command=self.remove_from_cart).pack(side=tk.LEFT, padx=5)
 
         # Bottom buttons
         button_frame = ttk.Frame(self, padding=10)
@@ -152,11 +174,46 @@ class CreateOrderWindow(BaseWindow):
         self.cart.append({'product_id': product['product_id'], 'name': product['name'], 'quantity': quantity})
         self.update_cart_display()
 
+    def filter_products(self, event=None):
+        search_term = self.product_search_var.get().lower()
+
+        filtered_products = [p['name'] for p in self.products if search_term in p['name'].lower()]
+        self.product_combobox['values'] = filtered_products
+        if filtered_products:
+            self.product_var.set(filtered_products[0])
+        else:
+            self.product_var.set("")
+
     def update_cart_display(self):
         for i in self.cart_tree.get_children():
             self.cart_tree.delete(i)
         for item in self.cart:
             self.cart_tree.insert("", "end", values=(item['product_id'], item['name'], item['quantity']))
+
+    def remove_from_cart(self):
+        selected_item = self.cart_tree.selection()
+        if not selected_item:
+            return
+        item_id = int(self.cart_tree.item(selected_item[0])['values'][0])
+        self.cart = [item for item in self.cart if item['product_id'] != item_id]
+        self.update_cart_display()
+
+    def edit_quantity(self):
+        selected_item = self.cart_tree.selection()
+        if not selected_item:
+            return
+
+        item_values = self.cart_tree.item(selected_item[0])['values']
+        product_id = int(item_values[0])
+        product_name = item_values[1]
+
+        new_quantity = simpledialog.askinteger("Edit Quantity", f"Enter new quantity for {product_name}:", parent=self, minvalue=1)
+        if new_quantity:
+            for item in self.cart:
+                if item['product_id'] == product_id:
+                    item['quantity'] = new_quantity
+                    break
+            self.update_cart_display()
 
     def on_save(self):
         customer_name = self.customer_var.get()

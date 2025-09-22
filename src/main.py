@@ -10,9 +10,7 @@ from gui.order_view import OrderView
 
 class App(ThemedTk):
     def __init__(self):
-        super().__init__()
-        self.set_theme("arc") # Set a default modern theme
-
+        super().__init__(theme="adapta")  # Set a modern theme
         self.title("Inventory and Sales Management System")
         # Set a min size for the app window
         self.minsize(400, 300)
@@ -54,6 +52,7 @@ class App(ThemedTk):
         self.center_window(900, 600)
         self.current_frame = MainWindow(self, self.current_user, app_controller=self)
         self.current_frame.pack(fill=tk.BOTH, expand=True)
+        self.current_frame.update_stats() # Ensure stats are fresh
 
     def show_inventory_view(self):
         """Shows the inventory management view."""
