@@ -1,3 +1,4 @@
+import tkinter as tk
 from tkinter import ttk
 from database import initialize_database
 from ttkthemes import ThemedTk
@@ -61,7 +62,16 @@ class App(ThemedTk):
 
         self.title("Inventory Management")
         self.current_frame = InventoryView(self, app_controller=self)
-        self.current_frame.pack(fill=tk.BOTH, expand=True)
+        # Check if the view has a frame attribute or is a frame itself
+        if hasattr(self.current_frame, 'frame'):
+            self.current_frame.frame.pack(fill=tk.BOTH, expand=True)
+        elif hasattr(self.current_frame, 'pack_frame'):
+            self.current_frame.pack_frame(fill=tk.BOTH, expand=True)
+        else:
+            # Create a frame and add the view to it
+            container = ttk.Frame(self)
+            container.pack(fill=tk.BOTH, expand=True)
+            self.current_frame.master = container
 
     def show_sales_view(self):
         """Shows the sales view."""
