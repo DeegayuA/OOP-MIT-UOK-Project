@@ -287,6 +287,30 @@ def get_dashboard_stats():
 
 # --- Inventory Management Services ---
 
+def get_all_products_with_stock():
+    """
+    Retrieves all products and includes their current total stock level.
+    This is more efficient for UIs that need to check against reorder levels.
+    """
+    conn = get_db_connection()
+    try:
+        cursor = conn.execute("""
+            SELECT
+                p.product_id,
+                p.name,
+                p.category,
+                p.reorder_level,
+                IFNULL(SUM(b.quantity), 0) as total_stock
+            FROM products p
+            LEFT JOIN batches b ON p.product_id = b.product_id
+            GROUP BY p.product_id, p.name, p.category, p.reorder_level
+            ORDER BY p.name
+        """)
+        products = cursor.fetchall()
+        return [dict(row) for row in products]
+    finally:
+        conn.close()
+
 def get_all_products():
     """Retrieves all products from the database."""
     conn = get_db_connection()
