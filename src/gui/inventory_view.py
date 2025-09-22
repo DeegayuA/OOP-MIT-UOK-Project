@@ -2,8 +2,6 @@ import tkinter as tk
 from tkinter import ttk, messagebox
 import services
 from gui.base_window import BaseWindow
-
-class InventoryView(BaseWindow):
     def __init__(self, parent, app_controller):
         super().__init__(parent)
         self.app_controller = app_controller

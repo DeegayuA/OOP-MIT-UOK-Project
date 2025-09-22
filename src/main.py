@@ -5,6 +5,7 @@ from gui.login_window import LoginFrame
 from gui.main_window import MainWindow
 from gui.inventory_view import InventoryView
 from gui.sales_view import SalesView
+from gui.order_view import OrderView
 
 class App(tk.Tk):
     def __init__(self):
@@ -67,6 +68,15 @@ class App(tk.Tk):
 
         self.title("New Sale")
         self.current_frame = SalesView(self, app_controller=self)
+        self.current_frame.pack(fill=tk.BOTH, expand=True)
+
+    def show_order_view(self):
+        """Shows the order management view."""
+        if self.current_frame:
+            self.current_frame.destroy()
+
+        self.title("Order Management")
+        self.current_frame = OrderView(self, app_controller=self)
         self.current_frame.pack(fill=tk.BOTH, expand=True)
 
 def main():

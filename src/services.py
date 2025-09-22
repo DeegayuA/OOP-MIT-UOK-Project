@@ -17,6 +17,71 @@ def log_activity(user_id, action_description):
     finally:
         conn.close()
 
+# --- Order Management Services ---
+
+def get_all_orders_with_customer_names():
+    """Retrieves all orders with their associated customer's name."""
+    conn = get_db_connection()
+    try:
+        cursor = conn.execute("""
+            SELECT
+                o.order_id,
+                c.name as customer_name,
+                o.order_date,
+                o.status
+            FROM orders o
+            LEFT JOIN customers c ON o.customer_id = c.customer_id
+            ORDER BY o.order_date DESC
+        """)
+        orders = cursor.fetchall()
+        return [dict(row) for row in orders]
+    finally:
+        conn.close()
+
+def create_order(customer_id, items):
+    """
+    Creates a new customer order transactionally.
+    `items` is a list of dicts: [{'product_id': id, 'quantity': qty}]
+    """
+    conn = get_db_connection()
+    try:
+        cursor = conn.cursor()
+
+        # 1. Create the main order record
+        today = date.today().strftime('%Y-%m-%d')
+        cursor.execute(
+            "INSERT INTO orders (customer_id, order_date, status) VALUES (?, ?, ?)",
+            (customer_id, today, 'Received')
+        )
+        order_id = cursor.lastrowid
+
+        # 2. Create the order item records
+        for item in items:
+            cursor.execute(
+                "INSERT INTO order_items (order_id, product_id, quantity_ordered) VALUES (?, ?, ?)",
+                (order_id, item['product_id'], item['quantity'])
+            )
+
+        conn.commit()
+        return order_id
+    except sqlite3.Error as e:
+        conn.rollback()
+        raise e
+    finally:
+        conn.close()
+
+def update_order_status(order_id, new_status):
+    """Updates the status of an existing order."""
+    conn = get_db_connection()
+    try:
+        conn.execute(
+            "UPDATE orders SET status = ? WHERE order_id = ?",
+            (new_status, order_id)
+        )
+        conn.commit()
+    finally:
+        conn.close()
+
 def create_sale(user_id, customer_id, cart):
     """
     Creates a new sale, updating batch quantities transactionally.
