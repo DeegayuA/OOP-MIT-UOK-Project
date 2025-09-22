@@ -49,7 +49,7 @@ class MainWindow(tk.Frame):
         # Total Sales Today
         sales_labelframe = ttk.LabelFrame(stats_frame, text="Total Sales Today")
         sales_labelframe.grid(row=0, column=0, padx=10, pady=10, sticky="ew")
-        self.sales_label = ttk.Label(sales_labelframe, text="$0.00", font=("Arial", 24))
+        self.sales_label = ttk.Label(sales_labelframe, text="0.00 LKR", font=("Arial", 24))
         self.sales_label.pack(padx=20, pady=20)
 
         # Near Expiry Items
@@ -68,7 +68,7 @@ class MainWindow(tk.Frame):
         """Fetches stats from the service layer and updates the UI."""
         try:
             stats = get_dashboard_stats()
-            self.sales_label.config(text=f"${stats['total_sales_today']:.2f}")
+            self.sales_label.config(text=f"{stats['total_sales_today']:.2f} LKR")
             self.expiry_label.config(text=f"{stats['near_expiry_items']} Items")
             self.stock_label.config(text=f"{stats['low_stock_items']} Items")
         except Exception as e:

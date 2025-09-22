@@ -2,6 +2,8 @@ import tkinter as tk
 from tkinter import ttk, messagebox
 import services
 from gui.base_window import BaseWindow
+
+class InventoryView(BaseWindow):
     def __init__(self, parent, app_controller):
         super().__init__(parent)
         self.app_controller = app_controller
@@ -77,7 +79,7 @@ from gui.base_window import BaseWindow
         product_id = self.products_tree.item(selected_item[0])['values'][0]
         batches = services.get_batches_for_product(product_id)
         for b in batches:
-            self.batches_tree.insert("", tk.END, values=(b['batch_id'], b['batch_number'], b['quantity'], b['expiry_date'], f"${b['selling_price']:.2f}"))
+            self.batches_tree.insert("", tk.END, values=(b['batch_id'], b['batch_number'], b['quantity'], b['expiry_date'], f"{b['selling_price']:.2f}LKR"))
 
     def add_product(self):
         win = AddEditProductWindow(self)

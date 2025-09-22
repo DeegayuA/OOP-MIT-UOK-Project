@@ -53,7 +53,7 @@ class SalesView(tk.Frame):
         # --- Bottom Frame: Totals and Finalize ---
         totals_frame = ttk.Frame(bottom_frame)
         totals_frame.pack(side=tk.RIGHT)
-        self.total_label = ttk.Label(totals_frame, text="Total: $0.00", font=("Arial", 14, "bold"))
+        self.total_label = ttk.Label(totals_frame, text="Total: 0.00 LKR", font=("Arial", 14, "bold"))
         self.total_label.pack(pady=5)
 
         ttk.Button(bottom_frame, text="Finalize Sale", command=self.finalize_sale).pack(side=tk.LEFT, ipady=10)
@@ -73,7 +73,7 @@ class SalesView(tk.Frame):
             self.products_tree.delete(i)
         products = services.get_products_for_sale()
         for p in products:
-            self.products_tree.insert("", "end", values=(p['product_id'], p['name'], f"${p['selling_price']:.2f}"))
+            self.products_tree.insert("", "end", values=(p['product_id'], p['name'], f"{p['selling_price']:.2f} LKR"))
 
     def add_to_cart(self):
         selected_item = self.products_tree.selection()
@@ -83,7 +83,7 @@ class SalesView(tk.Frame):
 
         item_values = self.products_tree.item(selected_item[0])['values']
         product_id, name, price_str = item_values
-        price = float(price_str.replace("$", ""))
+        price = float(price_str.replace(" LKR", "").replace(",", ""))
 
         quantity = simpledialog.askinteger("Quantity", f"Enter quantity for {name}:", parent=self, minvalue=1)
         if not quantity:
@@ -107,9 +107,9 @@ class SalesView(tk.Frame):
         for item in self.cart:
             item_total = item['quantity'] * item['price']
             total += item_total
-            self.cart_tree.insert("", "end", values=(item['product_id'], item['name'], item['quantity'], f"${item_total:.2f}"))
+            self.cart_tree.insert("", "end", values=(item['product_id'], item['name'], item['quantity'], f"{item_total:.2f} LKR"))
 
-        self.total_label.config(text=f"Total: ${total:.2f}")
+        self.total_label.config(text=f"Total: {total:.2f} LKR")
 
     def finalize_sale(self):
         if not self.cart:
