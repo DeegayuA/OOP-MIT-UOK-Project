@@ -1,4 +1,5 @@
 import tkinter as tk
+from tkinter import ttk
 from database import initialize_database
 from gui.login_window import LoginWindow
 from gui.main_window import MainWindow
