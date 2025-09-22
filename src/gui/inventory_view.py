@@ -2,11 +2,16 @@ import tkinter as tk
 from tkinter import ttk, messagebox
 import services
 from gui.base_window import BaseWindow
+from datetime import datetime, timedelta
+
+class InventoryView(tk.Frame):
     def __init__(self, parent, app_controller):
         super().__init__(parent)
         self.app_controller = app_controller
+        self.all_products = [] # To hold the full list for filtering
 
         self.create_widgets()
+        self.configure_tags()
         self.refresh_products()
 
     def create_widgets(self):
@@ -24,7 +29,17 @@ from gui.base_window import BaseWindow
         button_frame.pack(side=tk.BOTTOM, fill=tk.X, padx=10, pady=5)
 
         # --- Products List (Left Frame) ---
-        ttk.Label(left_frame, text="Products", font=("Arial", 16)).pack(pady=5)
+        product_header_frame = ttk.Frame(left_frame)
+        product_header_frame.pack(fill=tk.X)
+        ttk.Label(product_header_frame, text="Products", font=("Arial", 16)).pack(side=tk.LEFT, pady=5)
+
+        search_frame = ttk.Frame(left_frame)
+        search_frame.pack(fill=tk.X, pady=5)
+        ttk.Label(search_frame, text="Search:").pack(side=tk.LEFT, padx=(0, 5))
+        self.search_var = tk.StringVar()
+        search_entry = ttk.Entry(search_frame, textvariable=self.search_var)
+        search_entry.pack(fill=tk.X, expand=True)
+        search_entry.bind("<KeyRelease>", self.filter_products)
 
         self.products_tree = ttk.Treeview(left_frame, columns=("id", "name", "category"), show="headings")
         self.products_tree.heading("id", text="ID")
@@ -56,15 +71,31 @@ from gui.base_window import BaseWindow
         ttk.Button(button_frame, text="Add Batch", command=self.add_batch).pack(side=tk.LEFT, padx=5)
         ttk.Button(button_frame, text="Back to Dashboard", command=self.app_controller.show_main_dashboard).pack(side=tk.RIGHT, padx=5)
 
+    def configure_tags(self):
+        self.products_tree.tag_configure('low_stock', background='#FFDDC1') # Light Orange
+        self.batches_tree.tag_configure('near_expiry', background='#FFB3BA') # Light Red
+
     def refresh_products(self):
+        self.all_products = services.get_all_products_with_stock()
+        self.filter_products() # Initial population
+
+    def filter_products(self, event=None):
+        search_term = self.search_var.get().lower()
+
+        # Clear the treeview
         for i in self.products_tree.get_children():
             self.products_tree.delete(i)
         for i in self.batches_tree.get_children():
             self.batches_tree.delete(i)
 
-        products = services.get_all_products()
-        for p in products:
-            self.products_tree.insert("", tk.END, values=(p['product_id'], p['name'], p['category']))
+        # Repopulate with filtered results
+        for p in self.all_products:
+            if search_term in p['name'].lower():
+                tags = ()
+                if p['total_stock'] < p['reorder_level']:
+                    tags = ('low_stock',)
+
+                self.products_tree.insert("", tk.END, values=(p['product_id'], p['name'], p['category']), tags=tags)
 
     def on_product_select(self, event):
         for i in self.batches_tree.get_children():
@@ -76,8 +107,19 @@ from gui.base_window import BaseWindow
 
         product_id = self.products_tree.item(selected_item[0])['values'][0]
         batches = services.get_batches_for_product(product_id)
+
+        thirty_days_from_now = datetime.now() + timedelta(days=30)
+
         for b in batches:
-            self.batches_tree.insert("", tk.END, values=(b['batch_id'], b['batch_number'], b['quantity'], b['expiry_date'], f"${b['selling_price']:.2f}"))
+            tags = ()
+            try:
+                expiry_date = datetime.strptime(b['expiry_date'], '%Y-%m-%d')
+                if expiry_date < thirty_days_from_now:
+                    tags = ('near_expiry',)
+            except (ValueError, TypeError):
+                pass # Ignore if date is invalid or None
+
+            self.batches_tree.insert("", tk.END, values=(b['batch_id'], b['batch_number'], b['quantity'], b['expiry_date'], f"LKR {b['selling_price']:.2f}"), tags=tags)
 
     def add_product(self):
         win = AddEditProductWindow(self)
@@ -96,13 +138,15 @@ from gui.base_window import BaseWindow
             messagebox.showwarning("Selection Error", "Please select a product to edit.")
             return
 
-        item_values = self.products_tree.item(selected_item[0])['values']
-        product_data = {
-            "id": item_values[0],
-            "name": item_values[1],
-            "category": item_values[2],
-            "reorder_level": services.get_all_products()[self.products_tree.index(selected_item[0])]['reorder_level'] # A bit hacky way to get reorder_level
-        }
+        # To get the full product data including reorder_level, we need to find it
+        # This is a bit inefficient, but ok for a small number of products.
+        product_id = self.products_tree.item(selected_item[0])['values'][0]
+        all_products = services.get_all_products_with_stock()
+        product_data = next((p for p in all_products if p['product_id'] == product_id), None)
+
+        if not product_data:
+            messagebox.showerror("Error", "Could not find product data.")
+            return
 
         win = AddEditProductWindow(self, product=product_data)
         self.wait_window(win)

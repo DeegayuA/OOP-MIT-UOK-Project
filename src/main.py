@@ -1,15 +1,17 @@
-import tkinter as tk
 from tkinter import ttk
 from database import initialize_database
+from ttkthemes import ThemedTk
 from gui.login_window import LoginFrame
 from gui.main_window import MainWindow
 from gui.inventory_view import InventoryView
 from gui.sales_view import SalesView
 from gui.order_view import OrderView
 
-class App(tk.Tk):
+class App(ThemedTk):
     def __init__(self):
         super().__init__()
+        self.set_theme("arc") # Set a default modern theme
+
         self.title("Inventory and Sales Management System")
         # Set a min size for the app window
         self.minsize(400, 300)
@@ -78,6 +80,14 @@ class App(tk.Tk):
         self.title("Order Management")
         self.current_frame = OrderView(self, app_controller=self)
         self.current_frame.pack(fill=tk.BOTH, expand=True)
+
+    def change_theme(self, theme_name):
+        """Changes the application's theme."""
+        try:
+            self.set_theme(theme_name)
+            print(f"Theme changed to {theme_name}")
+        except Exception as e:
+            print(f"Could not set theme {theme_name}: {e}")
 
 def main():
     """Main function to run the application."""

@@ -7,6 +7,7 @@ class OrderView(tk.Frame):
     def __init__(self, parent, app_controller):
         super().__init__(parent)
         self.app_controller = app_controller
+        self.all_orders = []
         self.create_widgets()
         self.refresh_data()
 
@@ -16,7 +17,18 @@ class OrderView(tk.Frame):
         button_frame = ttk.Frame(self)
         button_frame.pack(side=tk.BOTTOM, fill=tk.X, padx=10, pady=10)
 
-        ttk.Label(main_frame, text="Customer Orders", font=("Arial", 16)).pack(pady=5)
+        header_frame = ttk.Frame(main_frame)
+        header_frame.pack(fill=tk.X)
+        ttk.Label(header_frame, text="Customer Orders", font=("Arial", 16)).pack(side=tk.LEFT, pady=5)
+
+        search_frame = ttk.Frame(main_frame)
+        search_frame.pack(fill=tk.X, pady=5)
+        ttk.Label(search_frame, text="Search Customer:").pack(side=tk.LEFT, padx=(0, 5))
+        self.search_var = tk.StringVar()
+        search_entry = ttk.Entry(search_frame, textvariable=self.search_var)
+        search_entry.pack(fill=tk.X, expand=True)
+        search_entry.bind("<KeyRelease>", self.filter_orders)
+
         self.orders_tree = ttk.Treeview(main_frame, columns=("id", "customer", "date", "status"), show="headings")
         self.orders_tree.heading("id", text="Order ID"); self.orders_tree.heading("customer", text="Customer Name"); self.orders_tree.heading("date", text="Order Date"); self.orders_tree.heading("status", text="Status")
         self.orders_tree.column("id", width=80)
@@ -27,13 +39,20 @@ class OrderView(tk.Frame):
         ttk.Button(button_frame, text="Back to Dashboard", command=self.app_controller.show_main_dashboard).pack(side=tk.RIGHT, padx=5)
 
     def refresh_data(self):
+        self.all_orders = services.get_all_orders_with_customer_names()
+        self.filter_orders()
+
+    def filter_orders(self, event=None):
+        search_term = self.search_var.get().lower()
+
         for i in self.orders_tree.get_children():
             self.orders_tree.delete(i)
-        orders = services.get_all_orders_with_customer_names()
-        for o in orders:
-            # Handle case where customer might be deleted
-            customer_name = o['customer_name'] if o['customer_name'] else "N/A"
-            self.orders_tree.insert("", tk.END, values=(o['order_id'], customer_name, o['order_date'], o['status']))
+
+        for o in self.all_orders:
+            customer_name = o['customer_name'].lower() if o['customer_name'] else ""
+            if search_term in customer_name:
+                display_name = o['customer_name'] if o['customer_name'] else "N/A"
+                self.orders_tree.insert("", tk.END, values=(o['order_id'], display_name, o['order_date'], o['status']))
 
     def update_status(self):
         selected_item = self.orders_tree.selection()

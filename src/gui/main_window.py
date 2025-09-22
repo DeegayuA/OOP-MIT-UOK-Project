@@ -41,6 +41,19 @@ class MainWindow(tk.Frame):
         logout_button = ttk.Button(nav_frame, text="Logout", command=self.logout)
         logout_button.pack(side=tk.RIGHT, padx=5)
 
+        # --- Theme Selection Menu ---
+        theme_menu_button = ttk.Menubutton(nav_frame, text="Theme")
+        theme_menu_button.pack(side=tk.RIGHT, padx=5)
+
+        theme_menu = tk.Menu(theme_menu_button, tearoff=0)
+        theme_menu_button["menu"] = theme_menu
+
+        # Add theme options
+        # These call a method on the app_controller (main App instance)
+        theme_menu.add_command(label="Light (arc)", command=lambda: self.app_controller.change_theme("arc"))
+        theme_menu.add_command(label="Dark (equilux)", command=lambda: self.app_controller.change_theme("equilux"))
+        theme_menu.add_command(label="Classic (vista)", command=lambda: self.app_controller.change_theme("vista"))
+
         # --- Statistics Frames ---
         stats_frame.grid_columnconfigure(0, weight=1)
         stats_frame.grid_columnconfigure(1, weight=1)
@@ -49,7 +62,7 @@ class MainWindow(tk.Frame):
         # Total Sales Today
         sales_labelframe = ttk.LabelFrame(stats_frame, text="Total Sales Today")
         sales_labelframe.grid(row=0, column=0, padx=10, pady=10, sticky="ew")
-        self.sales_label = ttk.Label(sales_labelframe, text="$0.00", font=("Arial", 24))
+        self.sales_label = ttk.Label(sales_labelframe, text="LKR 0.00", font=("Arial", 24))
         self.sales_label.pack(padx=20, pady=20)
 
         # Near Expiry Items
@@ -68,7 +81,7 @@ class MainWindow(tk.Frame):
         """Fetches stats from the service layer and updates the UI."""
         try:
             stats = get_dashboard_stats()
-            self.sales_label.config(text=f"${stats['total_sales_today']:.2f}")
+            self.sales_label.config(text=f"LKR {stats['total_sales_today']:.2f}")
             self.expiry_label.config(text=f"{stats['near_expiry_items']} Items")
             self.stock_label.config(text=f"{stats['low_stock_items']} Items")
         except Exception as e:
