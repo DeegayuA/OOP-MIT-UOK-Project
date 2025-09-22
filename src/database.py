@@ -59,7 +59,7 @@ def initialize_database():
     CREATE TABLE IF NOT EXISTS products (
         product_id INTEGER PRIMARY KEY AUTOINCREMENT,
         name TEXT NOT NULL UNIQUE,
-        category TEXT NOT NULL CHECK(category IN ('Water', 'Soft Drink')),
+        category TEXT NOT NULL CHECK(category IN ('Water', 'Soft Drink', 'Juice', 'Snack')),
         reorder_level INTEGER NOT NULL DEFAULT 10
     )""")
 

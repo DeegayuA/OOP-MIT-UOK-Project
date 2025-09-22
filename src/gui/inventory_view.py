@@ -3,8 +3,7 @@ from tkinter import ttk, messagebox
 import services
 from gui.base_window import BaseWindow
 from gui.widgets.datepicker import create_datepicker_entry
-
-class InventoryView(BaseWindow):
+from datetime import date, timedelta
     def __init__(self, parent, app_controller):
         super().__init__(parent)
         self.app_controller = app_controller
@@ -46,6 +45,7 @@ class InventoryView(BaseWindow):
         self.products_tree.column("id", width=50, stretch=False)
         self.products_tree.pack(fill=tk.BOTH, expand=True)
         self.products_tree.bind("<<TreeviewSelect>>", self.on_product_select)
+        self.products_tree.bind("<Delete>", lambda event: self.delete_product())
 
         # --- Batches List (Right Frame) ---
         ttk.Label(right_frame, text="Batches for Selected Product", font=("Arial", 16)).pack(pady=5)
@@ -62,6 +62,7 @@ class InventoryView(BaseWindow):
         self.batches_tree.heading("sell_price", text="Price")
         self.batches_tree.column("batch_id", width=50, stretch=False)
         self.batches_tree.pack(fill=tk.BOTH, expand=True)
+        self.batches_tree.bind("<Delete>", lambda event: self.delete_batch())
 
         # --- Action Buttons (Bottom Frame) ---
         ttk.Button(button_frame, text="Add Product", command=self.add_product).pack(side=tk.LEFT, padx=5)
@@ -159,9 +160,12 @@ class InventoryView(BaseWindow):
             return
 
         product_id = self.products_tree.item(selected_item[0])['values'][0]
-        product_name = self.products_tree.item(selected_item[0])['values'][1]
+        product = services.get_product_by_id(product_id)
+        if not product:
+            messagebox.showerror("Error", "Could not fetch product details.")
+            return
 
-        win = AddBatchWindow(self, product_name)
+        win = AddBatchWindow(self, product)
         self.wait_window(win)
         if win.result:
             try:
@@ -207,9 +211,15 @@ class AddEditProductWindow(BaseWindow):
         form_frame.pack(fill=tk.BOTH, expand=True)
 
         ttk.Label(form_frame, text="Product Name:").grid(row=0, column=0, sticky=tk.W, pady=5)
-        ttk.Entry(form_frame, textvariable=self.name_var).grid(row=0, column=1, sticky=tk.EW)
+        name_entry = ttk.Entry(form_frame, textvariable=self.name_var)
+        name_entry.grid(row=0, column=1, sticky=tk.EW)
+        name_entry.focus_set()
+        name_entry.bind("<Return>", lambda event: self.on_save())
+
         ttk.Label(form_frame, text="Category:").grid(row=1, column=0, sticky=tk.W, pady=5)
-        ttk.Combobox(form_frame, textvariable=self.category_var, values=["Water", "Soft Drink"]).grid(row=1, column=1, sticky=tk.EW)
+        category_combobox = ttk.Combobox(form_frame, textvariable=self.category_var, values=services.PRODUCT_CATEGORIES)
+        category_combobox.grid(row=1, column=1, sticky=tk.EW)
+        category_combobox.bind("<Return>", lambda event: self.on_save())
         ttk.Label(form_frame, text="Reorder Level:").grid(row=2, column=0, sticky=tk.W, pady=5)
         ttk.Spinbox(form_frame, from_=0, to=1000, textvariable=self.reorder_level_var).grid(row=2, column=1, sticky=tk.EW)
 
@@ -217,6 +227,7 @@ class AddEditProductWindow(BaseWindow):
         button_frame.pack(fill=tk.X)
         ttk.Button(button_frame, text="Save", command=self.on_save).pack(side=tk.RIGHT, padx=5)
         ttk.Button(button_frame, text="Cancel", command=self.destroy).pack(side=tk.RIGHT)
+        self.bind("<Control-s>", lambda event: self.on_save())
 
     def on_save(self):
         name = self.name_var.get()
@@ -229,9 +240,10 @@ class AddEditProductWindow(BaseWindow):
         self.destroy()
 
 class AddBatchWindow(BaseWindow):
-    def __init__(self, parent, product_name):
+    def __init__(self, parent, product):
         super().__init__(parent)
-        self.title(f"Add Batch for {product_name}")
+        self.product = product
+        self.title(f"Add Batch for {self.product['name']}")
         self.result = None
         self.create_widgets()
         self.center_window()
@@ -250,15 +262,22 @@ class AddBatchWindow(BaseWindow):
 
         # Batch Number
         ttk.Label(form_frame, text="Batch Number:").grid(row=0, column=0, sticky=tk.W, pady=2)
-        ttk.Entry(form_frame, textvariable=self.batch_number_var).grid(row=0, column=1, sticky=tk.EW, pady=2)
+        batch_entry = ttk.Entry(form_frame, textvariable=self.batch_number_var)
+        batch_entry.grid(row=0, column=1, sticky=tk.EW, pady=2)
+        batch_entry.focus_set()
+        batch_entry.bind("<Return>", lambda event: self.on_save())
 
         # Quantity
         ttk.Label(form_frame, text="Quantity:").grid(row=1, column=0, sticky=tk.W, pady=2)
-        ttk.Entry(form_frame, textvariable=self.quantity_var).grid(row=1, column=1, sticky=tk.EW, pady=2)
+        quantity_entry = ttk.Entry(form_frame, textvariable=self.quantity_var)
+        quantity_entry.grid(row=1, column=1, sticky=tk.EW, pady=2)
+        quantity_entry.bind("<Return>", lambda event: self.on_save())
 
         # Manufacture Date
         mfg_date_frame, self.mfg_date_entry = create_datepicker_entry(form_frame, "Manufacture Date:")
         mfg_date_frame.grid(row=2, column=0, columnspan=2, sticky=tk.W, pady=2)
+        self.mfg_date_entry.insert(0, date.today().strftime('%Y-%m-%d'))
+        self.mfg_date_entry.bind("<<DatepickerSelected>>", self._calculate_and_set_expiry)
 
         # Expiry Date
         exp_date_frame, self.exp_date_entry = create_datepicker_entry(form_frame, "Expiry Date:")
@@ -276,6 +295,29 @@ class AddBatchWindow(BaseWindow):
         button_frame.pack(fill=tk.X)
         ttk.Button(button_frame, text="Save", command=self.on_save).pack(side=tk.RIGHT, padx=5)
         ttk.Button(button_frame, text="Cancel", command=self.destroy).pack(side=tk.RIGHT)
+        self.bind("<Control-s>", lambda event: self.on_save())
+
+        # Set initial expiry date
+        self._calculate_and_set_expiry()
+
+    def _calculate_and_set_expiry(self, event=None):
+        try:
+            mfg_date_str = self.mfg_date_entry.get()
+            mfg_date = date.fromisoformat(mfg_date_str)
+
+            years_to_add = 1 # Default
+            if self.product['category'] == 'Water':
+                years_to_add = 2
+            elif self.product['category'] == 'Soft Drink':
+                years_to_add = 1
+
+            expiry_date = mfg_date + timedelta(days=365 * years_to_add)
+
+            self.exp_date_entry.delete(0, tk.END)
+            self.exp_date_entry.insert(0, expiry_date.strftime('%Y-%m-%d'))
+        except (ValueError, TypeError):
+            # Handle cases where the date string is invalid or empty
+            self.exp_date_entry.delete(0, tk.END)
 
     def on_save(self):
         # Simple validation

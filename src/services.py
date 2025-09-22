@@ -5,6 +5,8 @@ Coordinates tasks between the GUI and the Data Access Layer.
 from database import get_db_connection, _hash_password
 from datetime import date, timedelta
 
+PRODUCT_CATEGORIES = ["Water", "Soft Drink", "Juice", "Snack"]
+
 def log_activity(user_id, action_description):
     """Logs an activity for a given user."""
     conn = get_db_connection()

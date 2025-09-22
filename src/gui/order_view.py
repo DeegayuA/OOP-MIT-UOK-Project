@@ -119,6 +119,7 @@ class CreateOrderWindow(BaseWindow):
         customer_names = [c['name'] for c in self.customers]
         self.customer_menu = ttk.Combobox(top_frame, textvariable=self.customer_var, values=customer_names, state="readonly")
         self.customer_menu.pack(side=tk.LEFT, padx=5)
+        self.customer_menu.focus_set()
 
         # Product selection and cart
         product_frame = ttk.LabelFrame(middle_frame, text="Add Products")
@@ -160,6 +161,7 @@ class CreateOrderWindow(BaseWindow):
         button_frame.pack(fill=tk.X)
         ttk.Button(button_frame, text="Save Order", command=self.on_save).pack(side=tk.RIGHT, padx=5)
         ttk.Button(button_frame, text="Cancel", command=self.destroy).pack(side=tk.RIGHT)
+        self.bind("<Control-s>", lambda event: self.on_save())
 
     def add_to_cart(self):
         product_name = self.product_var.get()

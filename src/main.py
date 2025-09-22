@@ -19,6 +19,24 @@ class App(ThemedTk):
         self.current_frame = None
 
         self.show_login_frame()
+        self.setup_shortcuts()
+
+    def setup_shortcuts(self):
+        self.bind("<Control-n>", lambda event: self.handle_new_item_shortcut())
+
+    def handle_new_item_shortcut(self):
+        # This is a bit of a hack, as we don't know which "new" action to take.
+        # A more robust solution would be a proper menu bar.
+        # For now, we'll check the type of the current frame.
+        from gui.inventory_view import InventoryView
+        from gui.order_view import OrderView
+
+        if isinstance(self.current_frame, InventoryView):
+            # In inventory view, "new" could mean new product or new batch.
+            # We'll default to new product.
+            self.current_frame.add_product()
+        elif isinstance(self.current_frame, OrderView):
+            self.current_frame.create_new_order()
 
     def center_window(self, width, height):
         """Centers the main window on the screen."""

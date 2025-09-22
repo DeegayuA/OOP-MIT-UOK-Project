@@ -82,6 +82,7 @@ class Datepicker(tk.Toplevel):
         self.selected_date = f"{self.year}-{self.month:02d}-{day:02d}"
         self.entry_widget.delete(0, tk.END)
         self.entry_widget.insert(0, self.selected_date)
+        self.entry_widget.event_generate("<<DatepickerSelected>>")
         self.destroy()
 
 def create_datepicker_entry(parent, text="Date:"):
