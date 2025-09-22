@@ -3,6 +3,7 @@ Service Layer: Contains the business logic of the application.
 Coordinates tasks between the GUI and the Data Access Layer.
 """
 from database import get_db_connection, _hash_password
+from datetime import date, timedelta
 
 def log_activity(user_id, action_description):
     """Logs an activity for a given user."""
@@ -55,3 +56,118 @@ def authenticate_user(username, password):
         return user_info
 
     return None
+
+def get_dashboard_stats():
+    """Fetches key statistics for the main dashboard."""
+    conn = get_db_connection()
+    try:
+        cursor = conn.cursor()
+
+        # 1. Total Sales Today
+        today = date.today().strftime('%Y-%m-%d')
+        cursor.execute(
+            "SELECT SUM(total_amount) FROM sales WHERE DATE(sale_date) = ?",
+            (today,)
+        )
+        total_sales_today = cursor.fetchone()[0] or 0.0
+
+        # 2. Items Nearing Expiry (in the next 30 days)
+        thirty_days_from_now = (date.today() + timedelta(days=30)).strftime('%Y-%m-%d')
+        cursor.execute(
+            "SELECT COUNT(*) FROM batches WHERE expiry_date BETWEEN ? AND ? AND quantity > 0",
+            (today, thirty_days_from_now)
+        )
+        near_expiry_items = cursor.fetchone()[0] or 0
+
+        # 3. Low Stock Alerts
+        cursor.execute("""
+            SELECT COUNT(p.product_id)
+            FROM products p
+            WHERE (
+                SELECT SUM(b.quantity)
+                FROM batches b
+                WHERE b.product_id = p.product_id
+            ) < p.reorder_level
+        """)
+        low_stock_items = cursor.fetchone()[0] or 0
+
+        return {
+            "total_sales_today": total_sales_today,
+            "near_expiry_items": near_expiry_items,
+            "low_stock_items": low_stock_items
+        }
+    finally:
+        conn.close()
+
+# --- Inventory Management Services ---
+
+def get_all_products():
+    """Retrieves all products from the database."""
+    conn = get_db_connection()
+    try:
+        cursor = conn.execute("SELECT product_id, name, category, reorder_level FROM products ORDER BY name")
+        products = cursor.fetchall()
+        return [dict(row) for row in products]
+    finally:
+        conn.close()
+
+def get_batches_for_product(product_id):
+    """Retrieves all batches for a specific product."""
+    conn = get_db_connection()
+    try:
+        cursor = conn.execute(
+            "SELECT batch_id, batch_number, quantity, manufacture_date, expiry_date, cost_price, selling_price "
+            "FROM batches WHERE product_id = ? ORDER BY expiry_date",
+            (product_id,)
+        )
+        batches = cursor.fetchall()
+        return [dict(row) for row in batches]
+    finally:
+        conn.close()
+
+def add_product(name, category, reorder_level):
+    """Adds a new product to the database."""
+    conn = get_db_connection()
+    try:
+        conn.execute(
+            "INSERT INTO products (name, category, reorder_level) VALUES (?, ?, ?)",
+            (name, category, reorder_level)
+        )
+        conn.commit()
+    finally:
+        conn.close()
+
+def update_product(product_id, name, category, reorder_level):
+    """Updates an existing product."""
+    conn = get_db_connection()
+    try:
+        conn.execute(
+            "UPDATE products SET name = ?, category = ?, reorder_level = ? WHERE product_id = ?",
+            (name, category, reorder_level, product_id)
+        )
+        conn.commit()
+    finally:
+        conn.close()
+
+def add_batch(product_id, data):
+    """Adds a new batch for a product."""
+    conn = get_db_connection()
+    try:
+        conn.execute(
+            """
+            INSERT INTO batches (product_id, batch_number, quantity, manufacture_date, expiry_date, cost_price, selling_price)
+            VALUES (?, ?, ?, ?, ?, ?, ?)
+            """,
+            (
+                product_id,
+                data['batch_number'],
+                data['quantity'],
+                data['manufacture_date'],
+                data['expiry_date'],
+                data['cost_price'],
+                data['selling_price']
+            )
+        )
+        conn.commit()
+    finally:
+        conn.close()
