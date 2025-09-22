@@ -4,6 +4,8 @@ import services
 from gui.base_window import BaseWindow
 from gui.widgets.datepicker import create_datepicker_entry
 from datetime import date, timedelta
+
+class InventoryView(BaseWindow):
     def __init__(self, parent, app_controller):
         super().__init__(parent)
         self.app_controller = app_controller
