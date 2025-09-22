@@ -14,9 +14,29 @@ class App(tk.Tk):
         self.current_user = None
         self.current_frame = None
 
-        self.show_login_window()
+        self.show_loading_screen()
+
+    def show_loading_screen(self):
+        self.loading_win = tk.Toplevel(self)
+        self.loading_win.title("Loading...")
+        self.loading_win.geometry("200x100")
+
+        # Center the loading window
+        self.loading_win.update_idletasks()
+        x = (self.winfo_screenwidth() // 2) - (self.loading_win.winfo_width() // 2)
+        y = (self.winfo_screenheight() // 2) - (self.loading_win.winfo_height() // 2)
+        self.loading_win.geometry(f"+{x}+{y}")
+
+        ttk.Label(self.loading_win, text="Loading Application...", font=("Arial", 12)).pack(expand=True)
+
+        # Schedule the login window to appear after 2 seconds
+        self.after(2000, self.show_login_window)
 
     def show_login_window(self):
+        # Destroy the loading screen if it exists
+        if hasattr(self, 'loading_win'):
+            self.loading_win.destroy()
+
         """Hides the main window and shows the login window."""
         # Clear any existing frame
         if self.current_frame:

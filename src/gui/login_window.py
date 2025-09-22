@@ -1,8 +1,9 @@
 import tkinter as tk
 from tkinter import ttk
 from services import authenticate_user
+from gui.base_window import BaseWindow
 
-class LoginWindow(tk.Toplevel):
+class LoginWindow(BaseWindow):
     def __init__(self, parent, on_success):
         super().__init__(parent)
         self.title("User Login")
@@ -15,8 +16,7 @@ class LoginWindow(tk.Toplevel):
 
         self.create_widgets()
         self.protocol("WM_DELETE_WINDOW", self.master.destroy) # Exit app if this window is closed
-        self.transient(parent) # Keep window on top of the main one
-        self.grab_set() # Modal behavior
+        self.center_window()
 
     def create_widgets(self):
         self.grid_columnconfigure(0, weight=1)

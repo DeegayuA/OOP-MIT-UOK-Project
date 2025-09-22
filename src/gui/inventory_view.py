@@ -1,8 +1,7 @@
 import tkinter as tk
 from tkinter import ttk, messagebox
 import services
-
-class InventoryView(tk.Frame):
+from gui.base_window import BaseWindow
     def __init__(self, parent, app_controller):
         super().__init__(parent)
         self.app_controller = app_controller
@@ -134,15 +133,14 @@ class InventoryView(tk.Frame):
             except Exception as e:
                 messagebox.showerror("Error", f"Failed to add batch: {e}")
 
-class AddEditProductWindow(tk.Toplevel):
+class AddEditProductWindow(BaseWindow):
     def __init__(self, parent, product=None):
         super().__init__(parent)
-        self.transient(parent)
-        self.grab_set()
         self.product = product
         self.result = None
         self.title("Edit Product" if product else "Add New Product")
         self.create_widgets()
+        self.center_window()
 
     def create_widgets(self):
         self.name_var = tk.StringVar(value=self.product['name'] if self.product else "")
@@ -174,14 +172,13 @@ class AddEditProductWindow(tk.Toplevel):
             self.result["id"] = self.product["id"]
         self.destroy()
 
-class AddBatchWindow(tk.Toplevel):
+class AddBatchWindow(BaseWindow):
     def __init__(self, parent, product_name):
         super().__init__(parent)
-        self.transient(parent)
-        self.grab_set()
         self.title(f"Add Batch for {product_name}")
         self.result = None
         self.create_widgets()
+        self.center_window()
 
     def create_widgets(self):
         self.batch_number_var = tk.StringVar()
