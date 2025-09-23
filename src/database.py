@@ -21,6 +21,24 @@ def _hash_password(password):
     """Hashes a password using SHA-256."""
     return hashlib.sha256(password.encode('utf-8')).hexdigest()
 
+def delete_product(product_id):
+    """Deletes a product from the database."""
+    conn = get_db_connection()
+    try:
+        conn.execute("DELETE FROM products WHERE product_id = ?", (product_id,))
+        conn.commit()
+    finally:
+        conn.close()
+
+def delete_batch(batch_id):
+    """Deletes a batch from the database."""
+    conn = get_db_connection()
+    try:
+        conn.execute("DELETE FROM batches WHERE batch_id = ?", (batch_id,))
+        conn.commit()
+    finally:
+        conn.close()
+
 def initialize_database():
     """Initializes the database and creates tables if they don't exist."""
     conn = get_db_connection()
@@ -41,7 +59,7 @@ def initialize_database():
     CREATE TABLE IF NOT EXISTS products (
         product_id INTEGER PRIMARY KEY AUTOINCREMENT,
         name TEXT NOT NULL UNIQUE,
-        category TEXT NOT NULL CHECK(category IN ('Water', 'Soft Drink')),
+        category TEXT NOT NULL CHECK(category IN ('Water', 'Soft Drink', 'Juice', 'Snack')),
         reorder_level INTEGER NOT NULL DEFAULT 10
     )""")
 
@@ -55,7 +73,7 @@ def initialize_database():
         expiry_date DATE,
         cost_price REAL NOT NULL,
         selling_price REAL NOT NULL,
-        FOREIGN KEY (product_id) REFERENCES products (product_id)
+        FOREIGN KEY (product_id) REFERENCES products (product_id) ON DELETE CASCADE
     )""")
 
     # Customer Management

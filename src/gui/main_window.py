@@ -1,5 +1,5 @@
 import tkinter as tk
-from tkinter import ttk
+from tkinter import ttk, messagebox
 from services import get_dashboard_stats
 
 class MainWindow(tk.Frame):
@@ -30,12 +30,12 @@ class MainWindow(tk.Frame):
         orders_button = ttk.Button(nav_frame, text="Orders", command=self.app_controller.show_order_view)
         orders_button.pack(side=tk.LEFT, padx=5)
 
-        reports_button = ttk.Button(nav_frame, text="Reports")
+        reports_button = ttk.Button(nav_frame, text="Reports", command=self.show_not_implemented)
         reports_button.pack(side=tk.LEFT, padx=5)
 
         # Add User Management button only for Admins
         if self.user_info['role'] == 'Admin':
-            users_button = ttk.Button(nav_frame, text="User Management")
+            users_button = ttk.Button(nav_frame, text="User Management", command=self.show_not_implemented)
             users_button.pack(side=tk.LEFT, padx=5)
 
         logout_button = ttk.Button(nav_frame, text="Logout", command=self.logout)
@@ -46,22 +46,28 @@ class MainWindow(tk.Frame):
         stats_frame.grid_columnconfigure(1, weight=1)
         stats_frame.grid_columnconfigure(2, weight=1)
 
+        # --- Style Configuration ---
+        style = ttk.Style(self)
+        style.configure("Green.TLabel", foreground="green")
+        style.configure("Orange.TLabel", foreground="orange")
+        style.configure("Red.TLabel", foreground="red")
+
         # Total Sales Today
-        sales_labelframe = ttk.LabelFrame(stats_frame, text="Total Sales Today")
+        sales_labelframe = ttk.LabelFrame(stats_frame, text="✔ Total Sales Today")
         sales_labelframe.grid(row=0, column=0, padx=10, pady=10, sticky="ew")
-        self.sales_label = ttk.Label(sales_labelframe, text="0.00 LKR", font=("Arial", 24))
+        self.sales_label = ttk.Label(sales_labelframe, text="0.00 LKR", font=("Arial", 24), style="Green.TLabel")
         self.sales_label.pack(padx=20, pady=20)
 
         # Near Expiry Items
-        expiry_labelframe = ttk.LabelFrame(stats_frame, text="Items Nearing Expiry (30 days)")
+        expiry_labelframe = ttk.LabelFrame(stats_frame, text="⚠ Items Nearing Expiry (30 days)")
         expiry_labelframe.grid(row=0, column=1, padx=10, pady=10, sticky="ew")
-        self.expiry_label = ttk.Label(expiry_labelframe, text="0 Items", font=("Arial", 24))
+        self.expiry_label = ttk.Label(expiry_labelframe, text="0 Items", font=("Arial", 24), style="Orange.TLabel")
         self.expiry_label.pack(padx=20, pady=20)
 
         # Low Stock Alerts
-        stock_labelframe = ttk.LabelFrame(stats_frame, text="Low Stock Alerts")
+        stock_labelframe = ttk.LabelFrame(stats_frame, text="🔥 Low Stock Alerts")
         stock_labelframe.grid(row=0, column=2, padx=10, pady=10, sticky="ew")
-        self.stock_label = ttk.Label(stock_labelframe, text="0 Items", font=("Arial", 24))
+        self.stock_label = ttk.Label(stock_labelframe, text="0 Items", font=("Arial", 24), style="Red.TLabel")
         self.stock_label.pack(padx=20, pady=20)
 
     def update_stats(self):
@@ -80,4 +86,8 @@ class MainWindow(tk.Frame):
 
     def logout(self):
         """Calls the main app controller to handle logout."""
-        self.app_controller.show_login_window()
+        self.app_controller.show_login_frame()
+
+    def show_not_implemented(self):
+        """Shows a 'Feature not implemented' message."""
+        messagebox.showinfo("Info", "This feature is not yet implemented.")

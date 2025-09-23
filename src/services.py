@@ -5,6 +5,8 @@ Coordinates tasks between the GUI and the Data Access Layer.
 from database import get_db_connection, _hash_password
 from datetime import date, timedelta
 
+PRODUCT_CATEGORIES = ["Water", "Soft Drink", "Juice", "Snack"]
+
 def log_activity(user_id, action_description):
     """Logs an activity for a given user."""
     conn = get_db_connection()
@@ -13,6 +15,25 @@ def log_activity(user_id, action_description):
             "INSERT INTO activity_logs (user_id, action_description) VALUES (?, ?)",
             (user_id, action_description)
         )
+        conn.commit()
+    finally:
+        conn.close()
+
+def delete_batch(batch_id):
+    """Deletes a specific batch."""
+    conn = get_db_connection()
+    try:
+        conn.execute("DELETE FROM batches WHERE batch_id = ?", (batch_id,))
+        conn.commit()
+    finally:
+        conn.close()
+
+def delete_product(product_id):
+    """Deletes a product and all its associated batches."""
+    conn = get_db_connection()
+    try:
+        # This will also delete associated batches due to ON DELETE CASCADE
+        conn.execute("DELETE FROM products WHERE product_id = ?", (product_id,))
         conn.commit()
     finally:
         conn.close()
@@ -171,22 +192,24 @@ def get_all_customers():
 
 def get_products_for_sale():
     """
-    Retrieves all products that are available for sale.
+    Retrieves all products that are available for sale, including total stock.
     An available product has at least one batch with quantity > 0.
     The price is determined by the batch that will expire first (FIFO/FEFO).
     """
     conn = get_db_connection()
     try:
-        # This query finds the earliest-expiring batch with stock for each product
-        # and joins it with the product information.
+        # This query finds the earliest-expiring batch with stock for each product,
+        # joins it with product info, and calculates the total stock for that product.
         cursor = conn.execute("""
             SELECT
                 p.product_id,
                 p.name,
                 p.category,
-                b.selling_price
+                b.selling_price,
+                s.total_stock
             FROM products p
             JOIN (
+                -- Find the earliest-expiring batch for each product with stock
                 SELECT
                     product_id,
                     MIN(expiry_date) as min_expiry_date
@@ -195,11 +218,29 @@ def get_products_for_sale():
                 GROUP BY product_id
             ) as earliest_exp_batch ON p.product_id = earliest_exp_batch.product_id
             JOIN batches b ON p.product_id = b.product_id AND b.expiry_date = earliest_exp_batch.min_expiry_date
-            WHERE b.quantity > 0
+            JOIN (
+                -- Calculate total stock for each product
+                SELECT
+                    product_id,
+                    SUM(quantity) as total_stock
+                FROM batches
+                GROUP BY product_id
+            ) as s ON p.product_id = s.product_id
+            WHERE s.total_stock > 0
             ORDER BY p.name
         """)
         products = cursor.fetchall()
         return [dict(row) for row in products]
+    finally:
+        conn.close()
+
+def get_product_by_id(product_id):
+    """Retrieves a single product by its ID."""
+    conn = get_db_connection()
+    try:
+        cursor = conn.execute("SELECT product_id, name, category, reorder_level FROM products WHERE product_id = ?", (product_id,))
+        product = cursor.fetchone()
+        return dict(product) if product else None
     finally:
         conn.close()
 

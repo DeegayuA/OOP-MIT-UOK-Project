@@ -10,9 +10,7 @@ from gui.order_view import OrderView
 
 class App(ThemedTk):
     def __init__(self):
-        super().__init__()
-        self.set_theme("arc") # Set a default modern theme
-
+        super().__init__(theme="adapta")  # Set a modern theme
         self.title("Inventory and Sales Management System")
         # Set a min size for the app window
         self.minsize(400, 300)
@@ -21,6 +19,24 @@ class App(ThemedTk):
         self.current_frame = None
 
         self.show_login_frame()
+        self.setup_shortcuts()
+
+    def setup_shortcuts(self):
+        self.bind("<Control-n>", lambda event: self.handle_new_item_shortcut())
+
+    def handle_new_item_shortcut(self):
+        # This is a bit of a hack, as we don't know which "new" action to take.
+        # A more robust solution would be a proper menu bar.
+        # For now, we'll check the type of the current frame.
+        from gui.inventory_view import InventoryView
+        from gui.order_view import OrderView
+
+        if isinstance(self.current_frame, InventoryView):
+            # In inventory view, "new" could mean new product or new batch.
+            # We'll default to new product.
+            self.current_frame.add_product()
+        elif isinstance(self.current_frame, OrderView):
+            self.current_frame.create_new_order()
 
     def center_window(self, width, height):
         """Centers the main window on the screen."""
@@ -54,6 +70,7 @@ class App(ThemedTk):
         self.center_window(900, 600)
         self.current_frame = MainWindow(self, self.current_user, app_controller=self)
         self.current_frame.pack(fill=tk.BOTH, expand=True)
+        self.current_frame.update_stats() # Ensure stats are fresh
 
     def show_inventory_view(self):
         """Shows the inventory management view."""
