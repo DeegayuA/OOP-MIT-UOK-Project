@@ -1,6 +1,7 @@
 import tkinter as tk
 from tkinter import ttk, messagebox, simpledialog
 import services
+from .widgets.tooltip_button import TooltipButton
 
 class SalesView(tk.Frame):
     def __init__(self, parent, app_controller):
@@ -11,6 +12,14 @@ class SalesView(tk.Frame):
 
         self.create_widgets()
         self.load_initial_data()
+        self.bind_shortcuts()
+
+    def bind_shortcuts(self):
+        self.bind("<Control-Return>", lambda event: self.add_to_cart())
+        self.bind("<Control-e>", lambda event: self.edit_cart_item_quantity())
+        self.cart_tree.bind("<Delete>", lambda event: self.remove_from_cart())
+        self.bind("<Control-s>", lambda event: self.finalize_sale())
+        self.bind("<Escape>", lambda event: self.app_controller.show_main_dashboard())
 
     def create_widgets(self):
         # --- Main Layout ---
@@ -51,7 +60,7 @@ class SalesView(tk.Frame):
         self.products_tree.column("stock", width=60, stretch=False)
         self.products_tree.pack(fill=tk.BOTH, expand=True)
 
-        ttk.Button(products_frame, text="Add to Cart ->", command=self.add_to_cart).pack(pady=5)
+        TooltipButton(products_frame, text="Add to Cart (Ctrl+Enter)", command=self.add_to_cart).pack(pady=5)
 
         self.cart_tree = ttk.Treeview(cart_frame, columns=("id", "name", "qty", "total"), show="headings")
         self.cart_tree.heading("id", text="ID")
@@ -63,8 +72,8 @@ class SalesView(tk.Frame):
 
         cart_button_frame = ttk.Frame(cart_frame)
         cart_button_frame.pack(pady=5)
-        ttk.Button(cart_button_frame, text="Edit Quantity", command=self.edit_cart_item_quantity).pack(side=tk.LEFT, padx=5)
-        ttk.Button(cart_button_frame, text="Remove from Cart", command=self.remove_from_cart).pack(side=tk.LEFT, padx=5)
+        TooltipButton(cart_button_frame, text="Edit Qty (Ctrl+E)", command=self.edit_cart_item_quantity).pack(side=tk.LEFT, padx=5)
+        TooltipButton(cart_button_frame, text="Remove (Del)", command=self.remove_from_cart).pack(side=tk.LEFT, padx=5)
 
         # --- Bottom Frame: Totals and Finalize ---
         totals_frame = ttk.Frame(bottom_frame)
@@ -72,8 +81,8 @@ class SalesView(tk.Frame):
         self.total_label = ttk.Label(totals_frame, text="Total: 0.00 LKR", font=("Arial", 14, "bold"))
         self.total_label.pack(pady=5)
 
-        ttk.Button(bottom_frame, text="Finalize Sale", command=self.finalize_sale).pack(side=tk.LEFT, ipady=10)
-        ttk.Button(bottom_frame, text="Back to Dashboard", command=self.app_controller.show_main_dashboard).pack(side=tk.LEFT, padx=20)
+        TooltipButton(bottom_frame, text="Finalize Sale (Ctrl+S)", command=self.finalize_sale).pack(side=tk.LEFT, ipady=10)
+        TooltipButton(bottom_frame, text="Back (Esc)", command=self.app_controller.show_main_dashboard).pack(side=tk.LEFT, padx=20)
 
     def load_initial_data(self):
         # Load customers

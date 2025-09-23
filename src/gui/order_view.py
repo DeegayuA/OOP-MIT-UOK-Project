@@ -2,6 +2,7 @@ import tkinter as tk
 from tkinter import ttk, messagebox, simpledialog
 import services
 from gui.base_window import BaseWindow
+from .widgets.tooltip_button import TooltipButton
 
 class OrderView(tk.Frame):
     def __init__(self, parent, app_controller):
@@ -10,6 +11,12 @@ class OrderView(tk.Frame):
         self.all_orders = []
         self.create_widgets()
         self.refresh_data()
+        self.bind_shortcuts()
+
+    def bind_shortcuts(self):
+        self.bind("<Control-n>", lambda event: self.create_new_order())
+        self.bind("<Control-u>", lambda event: self.update_status())
+        self.bind("<Escape>", lambda event: self.app_controller.show_main_dashboard())
 
     def create_widgets(self):
         main_frame = ttk.Frame(self, padding="10")
@@ -34,7 +41,7 @@ class OrderView(tk.Frame):
         self.orders_tree.column("id", width=80)
         self.orders_tree.pack(fill=tk.BOTH, expand=True)
 
-        ttk.Button(button_frame, text="Create New Order", command=self.create_new_order).pack(side=tk.LEFT, padx=5)
+        TooltipButton(button_frame, text="New Order (Ctrl+N)", command=self.create_new_order).pack(side=tk.LEFT, padx=5)
 
         update_status_frame = ttk.Frame(button_frame)
         update_status_frame.pack(side=tk.LEFT, padx=10)
@@ -42,9 +49,9 @@ class OrderView(tk.Frame):
         status_menu = ttk.Combobox(update_status_frame, textvariable=self.status_var, state="readonly",
                                     values=['Received', 'Ready to Pack', 'Ready to Distribute', 'Completed'])
         status_menu.pack(side=tk.LEFT)
-        ttk.Button(update_status_frame, text="Update Status", command=self.update_status).pack(side=tk.LEFT, padx=5)
+        TooltipButton(update_status_frame, text="Update Status (Ctrl+U)", command=self.update_status).pack(side=tk.LEFT, padx=5)
 
-        ttk.Button(button_frame, text="Back to Dashboard", command=self.app_controller.show_main_dashboard).pack(side=tk.RIGHT, padx=5)
+        TooltipButton(button_frame, text="Back (Esc)", command=self.app_controller.show_main_dashboard).pack(side=tk.RIGHT, padx=5)
 
     def refresh_data(self):
         self.all_orders = services.get_all_orders_with_customer_names()
@@ -145,23 +152,25 @@ class CreateOrderWindow(BaseWindow):
         ttk.Label(product_frame, text="Quantity:").pack()
         self.quantity_var = tk.IntVar(value=1)
         ttk.Spinbox(product_frame, from_=1, to=999, textvariable=self.quantity_var).pack(pady=5)
-        ttk.Button(product_frame, text="Add to Order", command=self.add_to_cart).pack(pady=10)
+        TooltipButton(product_frame, text="Add to Order (Ctrl+Enter)", command=self.add_to_cart).pack(pady=10)
 
         self.cart_tree = ttk.Treeview(cart_frame, columns=("id", "name", "qty"), show="headings")
         self.cart_tree.heading("id", text="ID"); self.cart_tree.heading("name", text="Product"); self.cart_tree.heading("qty", text="Quantity")
         self.cart_tree.pack(fill=tk.BOTH, expand=True)
+        self.cart_tree.bind("<Delete>", lambda e: self.remove_from_cart())
 
         cart_buttons_frame = ttk.Frame(cart_frame)
         cart_buttons_frame.pack(fill=tk.X, pady=5)
-        ttk.Button(cart_buttons_frame, text="Edit Quantity", command=self.edit_quantity).pack(side=tk.LEFT)
-        ttk.Button(cart_buttons_frame, text="Remove from Order", command=self.remove_from_cart).pack(side=tk.LEFT, padx=5)
+        TooltipButton(cart_buttons_frame, text="Edit Qty (Ctrl+E)", command=self.edit_quantity).pack(side=tk.LEFT)
+        TooltipButton(cart_buttons_frame, text="Remove (Del)", command=self.remove_from_cart).pack(side=tk.LEFT, padx=5)
 
         # Bottom buttons
         button_frame = ttk.Frame(self, padding=10)
         button_frame.pack(fill=tk.X)
-        ttk.Button(button_frame, text="Save Order", command=self.on_save).pack(side=tk.RIGHT, padx=5)
-        ttk.Button(button_frame, text="Cancel", command=self.destroy).pack(side=tk.RIGHT)
+        TooltipButton(button_frame, text="Save Order (Ctrl+S)", command=self.on_save).pack(side=tk.RIGHT, padx=5)
+        TooltipButton(button_frame, text="Cancel (Esc)", command=self.destroy).pack(side=tk.RIGHT)
         self.bind("<Control-s>", lambda event: self.on_save())
+        self.bind("<Escape>", lambda event: self.destroy())
 
     def add_to_cart(self):
         product_name = self.product_var.get()

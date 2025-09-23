@@ -3,6 +3,7 @@ from tkinter import ttk, messagebox
 import services
 from gui.base_window import BaseWindow
 from gui.widgets.datepicker import create_datepicker_entry
+from gui.widgets.tooltip_button import TooltipButton
 from datetime import date, timedelta
 
 class InventoryView(BaseWindow):
@@ -12,6 +13,13 @@ class InventoryView(BaseWindow):
 
         self.create_widgets()
         self.refresh_products()
+        self.bind_shortcuts()
+
+    def bind_shortcuts(self):
+        self.bind("<Control-a>", lambda event: self.add_product())
+        self.bind("<Control-e>", lambda event: self.edit_product())
+        self.bind("<Control-b>", lambda event: self.add_batch())
+        self.bind("<Escape>", lambda event: self.app_controller.show_main_dashboard())
 
     def create_widgets(self):
         # Main layout frames
@@ -67,12 +75,12 @@ class InventoryView(BaseWindow):
         self.batches_tree.bind("<Delete>", lambda event: self.delete_batch())
 
         # --- Action Buttons (Bottom Frame) ---
-        ttk.Button(button_frame, text="Add Product", command=self.add_product).pack(side=tk.LEFT, padx=5)
-        ttk.Button(button_frame, text="Edit Product", command=self.edit_product).pack(side=tk.LEFT, padx=5)
-        ttk.Button(button_frame, text="Delete Product", command=self.delete_product).pack(side=tk.LEFT, padx=5)
-        ttk.Button(button_frame, text="Add Batch", command=self.add_batch).pack(side=tk.LEFT, padx=5)
-        ttk.Button(button_frame, text="Delete Batch", command=self.delete_batch).pack(side=tk.LEFT, padx=5)
-        ttk.Button(button_frame, text="Back to Dashboard", command=self.app_controller.show_main_dashboard).pack(side=tk.RIGHT, padx=5)
+        TooltipButton(button_frame, text="Add Product (Ctrl+A)", command=self.add_product).pack(side=tk.LEFT, padx=5)
+        TooltipButton(button_frame, text="Edit Product (Ctrl+E)", command=self.edit_product).pack(side=tk.LEFT, padx=5)
+        TooltipButton(button_frame, text="Delete Product (Del)", command=self.delete_product).pack(side=tk.LEFT, padx=5)
+        TooltipButton(button_frame, text="Add Batch (Ctrl+B)", command=self.add_batch).pack(side=tk.LEFT, padx=5)
+        TooltipButton(button_frame, text="Delete Batch (Del)", command=self.delete_batch).pack(side=tk.LEFT, padx=5)
+        TooltipButton(button_frame, text="Back (Esc)", command=self.app_controller.show_main_dashboard).pack(side=tk.RIGHT, padx=5)
 
     def refresh_products(self):
         self.all_products = services.get_all_products()

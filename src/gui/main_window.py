@@ -1,6 +1,7 @@
 import tkinter as tk
 from tkinter import ttk, messagebox
 from services import get_dashboard_stats
+from .widgets.tooltip_button import TooltipButton
 
 class MainWindow(tk.Frame):
     def __init__(self, parent, user_info, app_controller):
@@ -21,24 +22,27 @@ class MainWindow(tk.Frame):
         stats_frame.pack(side=tk.TOP, fill=tk.BOTH, expand=True, padx=10, pady=10)
 
         # --- Navigation Buttons ---
-        inventory_button = ttk.Button(nav_frame, text="Inventory", command=self.app_controller.show_inventory_view)
+        inventory_button = TooltipButton(nav_frame, text="Inventory (Ctrl+I)", command=self.app_controller.show_inventory_view, tooltip_text="Open Inventory View (Ctrl+I)")
         inventory_button.pack(side=tk.LEFT, padx=5)
 
-        sales_button = ttk.Button(nav_frame, text="Sales", command=self.app_controller.show_sales_view)
+        sales_button = TooltipButton(nav_frame, text="Sales (Ctrl+S)", command=self.app_controller.show_sales_view, tooltip_text="Open Sales View (Ctrl+S)")
         sales_button.pack(side=tk.LEFT, padx=5)
 
-        orders_button = ttk.Button(nav_frame, text="Orders", command=self.app_controller.show_order_view)
+        orders_button = TooltipButton(nav_frame, text="Orders (Ctrl+O)", command=self.app_controller.show_order_view, tooltip_text="Open Order View (Ctrl+O)")
         orders_button.pack(side=tk.LEFT, padx=5)
 
-        reports_button = ttk.Button(nav_frame, text="Reports", command=self.show_not_implemented)
+        reports_button = TooltipButton(nav_frame, text="Reports", command=self.show_not_implemented, tooltip_text="This feature is not yet implemented")
         reports_button.pack(side=tk.LEFT, padx=5)
 
         # Add User Management button only for Admins
         if self.user_info['role'] == 'Admin':
-            users_button = ttk.Button(nav_frame, text="User Management", command=self.show_not_implemented)
+            users_button = TooltipButton(nav_frame, text="User Management", command=self.show_not_implemented, tooltip_text="This feature is not yet implemented")
             users_button.pack(side=tk.LEFT, padx=5)
 
-        logout_button = ttk.Button(nav_frame, text="Logout", command=self.logout)
+        help_button = TooltipButton(nav_frame, text="Help (Ctrl+H)", command=self.app_controller.show_help_window, tooltip_text="Show Help (Ctrl+H)")
+        help_button.pack(side=tk.LEFT, padx=5)
+
+        logout_button = TooltipButton(nav_frame, text="Logout (Ctrl+L)", command=self.logout, tooltip_text="Logout (Ctrl+L)")
         logout_button.pack(side=tk.RIGHT, padx=5)
 
         # --- Statistics Frames ---
