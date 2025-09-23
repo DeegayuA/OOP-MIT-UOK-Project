@@ -1,5 +1,6 @@
 import tkinter as tk
 from tkinter import ttk
+import time
 from database import initialize_database
 from ttkthemes import ThemedTk
 from gui.login_window import LoginFrame
@@ -30,10 +31,10 @@ class App(ThemedTk):
     def fade_in_window(self, window):
         window.attributes("-alpha", 0.0)
         window.deiconify()
-        start_time = self.tk.clock()
+        start_time = time.time()
 
         def animate():
-            elapsed = self.tk.clock() - start_time
+            elapsed = time.time() - start_time
             alpha = min(elapsed / 0.2, 1.0) # 200ms fade-in
             window.attributes("-alpha", alpha)
             if alpha < 1.0:
