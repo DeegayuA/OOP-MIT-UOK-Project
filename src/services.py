@@ -244,6 +244,41 @@ def get_product_by_id(product_id):
     finally:
         conn.close()
 
+def get_near_expiry_items():
+    """Retrieves products with batches expiring in the next 30 days."""
+    conn = get_db_connection()
+    try:
+        today = date.today().strftime('%Y-%m-%d')
+        thirty_days_from_now = (date.today() + timedelta(days=30)).strftime('%Y-%m-%d')
+        cursor = conn.execute("""
+            SELECT p.name, b.batch_number, b.quantity, b.expiry_date
+            FROM batches b
+            JOIN products p ON b.product_id = p.product_id
+            WHERE b.expiry_date BETWEEN ? AND ? AND b.quantity > 0
+            ORDER BY b.expiry_date
+        """, (today, thirty_days_from_now))
+        items = cursor.fetchall()
+        return [dict(row) for row in items]
+    finally:
+        conn.close()
+
+def get_low_stock_items():
+    """Retrieves products where stock is below the reorder level."""
+    conn = get_db_connection()
+    try:
+        cursor = conn.execute("""
+            SELECT p.name, p.reorder_level, SUM(b.quantity) as total_stock
+            FROM products p
+            LEFT JOIN batches b ON p.product_id = b.product_id
+            GROUP BY p.product_id
+            HAVING IFNULL(SUM(b.quantity), 0) < p.reorder_level
+            ORDER BY p.name
+        """)
+        items = cursor.fetchall()
+        return [dict(row) for row in items]
+    finally:
+        conn.close()
+
 def authenticate_user(username, password):
     """
     Authenticates a user.
