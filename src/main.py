@@ -8,6 +8,7 @@ from gui.main_window import MainWindow
 from gui.inventory_view import InventoryView
 from gui.sales_view import SalesView
 from gui.order_view import OrderView
+from gui.reports_view import ReportsView
 from gui.help_window import HelpWindow
 
 class App(ThemedTk):
@@ -129,6 +130,16 @@ class App(ThemedTk):
 
         self.title("Order Management")
         self.current_frame = OrderView(self, self.current_user, app_controller=self)
+        self.current_frame.pack(fill=tk.BOTH, expand=True)
+        self.fade_in_window(self)
+
+    def show_reports_view(self):
+        """Shows the reports view."""
+        if self.current_frame:
+            self.current_frame.destroy()
+
+        self.title("Reports")
+        self.current_frame = ReportsView(self, self.current_user, app_controller=self)
         self.current_frame.pack(fill=tk.BOTH, expand=True)
         self.fade_in_window(self)
 
