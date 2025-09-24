@@ -47,6 +47,12 @@ class UserManagementView(ttk.Frame):
         delete_button = ttk.Button(button_frame, text="Delete User", command=self.delete_user)
         delete_button.pack(side='left', padx=5)
 
+        back_button = ttk.Button(button_frame, text="Back to Dashboard", command=self.back_to_dashboard)
+        back_button.pack(side='right', padx=5)
+
+    def back_to_dashboard(self):
+        self.app_controller.show_main_dashboard()
+
     def load_users(self):
         # Clear existing items
         for item in self.tree.get_children():
@@ -114,7 +120,7 @@ class UserDialog(tk.Toplevel):
 
         self.username = tk.StringVar()
         self.password = tk.StringVar()
-        self.role = tk.StringVar(value='Staff') # Default role
+        self.role = tk.StringVar(value='Viewer') # Default role
         self.is_active = tk.BooleanVar(value=True)
 
         self.create_widgets()
@@ -135,7 +141,7 @@ class UserDialog(tk.Toplevel):
         ttk.Entry(form_frame, textvariable=self.password, show="*").grid(row=1, column=1, sticky="ew")
 
         ttk.Label(form_frame, text="Role:").grid(row=2, column=0, sticky="w", pady=5)
-        role_menu = ttk.Combobox(form_frame, textvariable=self.role, values=['Admin', 'Staff'])
+        role_menu = ttk.Combobox(form_frame, textvariable=self.role, values=['Viewer', 'Seller', 'Manager', 'Admin'])
         role_menu.grid(row=2, column=1, sticky="ew")
 
         if self.user_id:

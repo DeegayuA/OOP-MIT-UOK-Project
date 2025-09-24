@@ -99,7 +99,7 @@ def initialize_database(conn=None):
         user_id INTEGER PRIMARY KEY AUTOINCREMENT,
         username TEXT NOT NULL UNIQUE,
         password_hash TEXT NOT NULL,
-        role TEXT NOT NULL CHECK(role IN ('Admin', 'Staff')),
+        role TEXT NOT NULL CHECK(role IN ('Viewer', 'Seller', 'Manager', 'Admin')),
         is_active BOOLEAN NOT NULL DEFAULT 1
     )""")
 

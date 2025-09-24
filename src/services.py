@@ -156,16 +156,16 @@ def update_order_status(order_id, new_status):
     finally:
         conn.close()
 
-def create_sale(user_id, customer_id, cart):
+def create_sale(user_id, customer_id, cart, discount=0):
     """
     Creates a new sale, updating batch quantities transactionally.
     `cart` is a list of dictionaries, e.g., [{'product_id': 1, 'quantity': 2}, ...]
     """
     conn = get_db_connection()
     try:
-        total_amount = 0
+        subtotal = 0
 
-        # First, calculate total amount and check stock availability
+        # First, calculate subtotal and check stock availability
         for item in cart:
             product_id = item['product_id']
             quantity_to_sell = item['quantity']
@@ -179,15 +179,18 @@ def create_sale(user_id, customer_id, cart):
                 raise ValueError(f"Not enough stock for product ID {product_id}. Available: {total_stock}, Requested: {quantity_to_sell}")
 
             # The price is determined by the first batch we'd sell from
-            total_amount += batches[0]['selling_price'] * quantity_to_sell
+            subtotal += batches[0]['selling_price'] * quantity_to_sell
+
+        discount_amount = (subtotal * discount) / 100
+        total_amount = subtotal - discount_amount
 
         # --- Begin Transaction ---
         cursor = conn.cursor()
 
         # 1. Create the sale record
         cursor.execute(
-            "INSERT INTO sales (user_id, customer_id, total_amount) VALUES (?, ?, ?)",
-            (user_id, customer_id, total_amount)
+            "INSERT INTO sales (user_id, customer_id, total_amount, discount_applied) VALUES (?, ?, ?, ?)",
+            (user_id, customer_id, total_amount, discount_amount)
         )
         sale_id = cursor.lastrowid
 

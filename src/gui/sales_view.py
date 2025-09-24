@@ -4,8 +4,9 @@ import services
 from .widgets.tooltip_button import TooltipButton
 
 class SalesView(tk.Frame):
-    def __init__(self, parent, app_controller):
+    def __init__(self, parent, user_info, app_controller):
         super().__init__(parent)
+        self.user_info = user_info
         self.app_controller = app_controller
         self.cart = [] # List of {'product_id':, 'name':, 'quantity':, 'price':}
         self.customers = [] # To store full customer objects
@@ -78,8 +79,19 @@ class SalesView(tk.Frame):
         # --- Bottom Frame: Totals and Finalize ---
         totals_frame = ttk.Frame(bottom_frame)
         totals_frame.pack(side=tk.RIGHT)
+
+        discount_frame = ttk.Frame(totals_frame)
+        discount_frame.pack(pady=5)
+        ttk.Label(discount_frame, text="Discount (%):").pack(side=tk.LEFT)
+        self.discount_var = tk.DoubleVar(value=0.0)
+        self.discount_entry = ttk.Entry(discount_frame, textvariable=self.discount_var, width=10)
+        self.discount_entry.pack(side=tk.LEFT)
+
         self.total_label = ttk.Label(totals_frame, text="Total: 0.00 LKR", font=("Arial", 14, "bold"))
         self.total_label.pack(pady=5)
+
+        if self.user_info['role'] not in ['Manager', 'Admin']:
+            self.discount_entry.config(state=tk.DISABLED)
 
         TooltipButton(bottom_frame, text="Finalize Sale (Ctrl+S)", command=self.finalize_sale).pack(side=tk.LEFT, ipady=10)
         TooltipButton(bottom_frame, text="Back (Esc)", command=self.app_controller.show_main_dashboard).pack(side=tk.LEFT, padx=20)
@@ -182,13 +194,17 @@ class SalesView(tk.Frame):
         for i in self.cart_tree.get_children():
             self.cart_tree.delete(i)
 
-        total = 0
+        subtotal = 0
         for item in self.cart:
             item_total = item['quantity'] * item['price']
-            total += item_total
+            subtotal += item_total
             self.cart_tree.insert("", "end", values=(item['product_id'], item['name'], item['quantity'], f"{item_total:.2f} LKR"))
 
-        self.total_label.config(text=f"Total: {total:.2f} LKR")
+        discount_percent = self.discount_var.get()
+        discount_amount = (subtotal * discount_percent) / 100
+        total = subtotal - discount_amount
+
+        self.total_label.config(text=f"Subtotal: {subtotal:.2f} LKR\nDiscount: {discount_amount:.2f} LKR\nTotal: {total:.2f} LKR")
 
     def finalize_sale(self):
         if not self.cart:
@@ -204,9 +220,10 @@ class SalesView(tk.Frame):
                 customer_id = customer['customer_id']
 
         user_id = self.app_controller.current_user['user_id']
+        discount = self.discount_var.get()
 
         try:
-            sale_id = services.create_sale(user_id, customer_id, self.cart)
+            sale_id = services.create_sale(user_id, customer_id, self.cart, discount)
             messagebox.showinfo("Success", f"Sale #{sale_id} created successfully!")
             self.reset_sale()
         except ValueError as e:

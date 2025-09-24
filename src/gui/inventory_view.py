@@ -7,8 +7,9 @@ from gui.widgets.tooltip_button import TooltipButton
 from datetime import date, timedelta
 
 class InventoryView(BaseWindow):
-    def __init__(self, parent, app_controller):
+    def __init__(self, parent, user_info, app_controller):
         super().__init__(parent)
+        self.user_info = user_info
         self.app_controller = app_controller
 
         self.create_widgets()
@@ -75,12 +76,24 @@ class InventoryView(BaseWindow):
         self.batches_tree.bind("<Delete>", lambda event: self.delete_batch())
 
         # --- Action Buttons (Bottom Frame) ---
-        TooltipButton(button_frame, text="Add Product (Ctrl+A)", command=self.add_product).pack(side=tk.LEFT, padx=5)
-        TooltipButton(button_frame, text="Edit Product (Ctrl+E)", command=self.edit_product).pack(side=tk.LEFT, padx=5)
-        TooltipButton(button_frame, text="Delete Product (Del)", command=self.delete_product).pack(side=tk.LEFT, padx=5)
-        TooltipButton(button_frame, text="Add Batch (Ctrl+B)", command=self.add_batch).pack(side=tk.LEFT, padx=5)
-        TooltipButton(button_frame, text="Delete Batch (Del)", command=self.delete_batch).pack(side=tk.LEFT, padx=5)
+        add_product_button = TooltipButton(button_frame, text="Add Product (Ctrl+A)", command=self.add_product)
+        add_product_button.pack(side=tk.LEFT, padx=5)
+        edit_product_button = TooltipButton(button_frame, text="Edit Product (Ctrl+E)", command=self.edit_product)
+        edit_product_button.pack(side=tk.LEFT, padx=5)
+        delete_product_button = TooltipButton(button_frame, text="Delete Product (Del)", command=self.delete_product)
+        delete_product_button.pack(side=tk.LEFT, padx=5)
+        add_batch_button = TooltipButton(button_frame, text="Add Batch (Ctrl+B)", command=self.add_batch)
+        add_batch_button.pack(side=tk.LEFT, padx=5)
+        delete_batch_button = TooltipButton(button_frame, text="Delete Batch (Del)", command=self.delete_batch)
+        delete_batch_button.pack(side=tk.LEFT, padx=5)
         TooltipButton(button_frame, text="Back (Esc)", command=self.app_controller.show_main_dashboard).pack(side=tk.RIGHT, padx=5)
+
+        if self.user_info['role'] in ['Viewer', 'Seller']:
+            add_product_button.configure(state=tk.DISABLED)
+            edit_product_button.configure(state=tk.DISABLED)
+            delete_product_button.configure(state=tk.DISABLED)
+            add_batch_button.configure(state=tk.DISABLED)
+            delete_batch_button.configure(state=tk.DISABLED)
 
     def refresh_products(self):
         self.all_products = services.get_all_products()

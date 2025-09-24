@@ -108,7 +108,7 @@ class App(ThemedTk):
             self.current_frame.destroy()
 
         self.title("Inventory Management")
-        self.current_frame = InventoryView(self, app_controller=self)
+        self.current_frame = InventoryView(self, self.current_user, app_controller=self)
         self.current_frame.pack(fill=tk.BOTH, expand=True)
         self.fade_in_window(self)
 
@@ -118,7 +118,7 @@ class App(ThemedTk):
             self.current_frame.destroy()
 
         self.title("New Sale")
-        self.current_frame = SalesView(self, app_controller=self)
+        self.current_frame = SalesView(self, self.current_user, app_controller=self)
         self.current_frame.pack(fill=tk.BOTH, expand=True)
         self.fade_in_window(self)
 
@@ -128,7 +128,7 @@ class App(ThemedTk):
             self.current_frame.destroy()
 
         self.title("Order Management")
-        self.current_frame = OrderView(self, app_controller=self)
+        self.current_frame = OrderView(self, self.current_user, app_controller=self)
         self.current_frame.pack(fill=tk.BOTH, expand=True)
         self.fade_in_window(self)
 

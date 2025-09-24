@@ -60,6 +60,10 @@ class MainWindow(tk.Frame):
         orders_button = TooltipButton(nav_frame, text="Orders (Ctrl+O)", command=self.app_controller.show_order_view, tooltip_text="Open Order View (Ctrl+O)")
         orders_button.pack(side=tk.LEFT, padx=5)
 
+        if self.user_info['role'] == 'Viewer':
+            sales_button.configure(state=tk.DISABLED)
+            orders_button.configure(state=tk.DISABLED)
+
         reports_button = TooltipButton(nav_frame, text="Reports", command=self.show_not_implemented, tooltip_text="This feature is not yet implemented")
         reports_button.pack(side=tk.LEFT, padx=5)
 

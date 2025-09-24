@@ -5,8 +5,9 @@ from gui.base_window import BaseWindow
 from .widgets.tooltip_button import TooltipButton
 
 class OrderView(tk.Frame):
-    def __init__(self, parent, app_controller):
+    def __init__(self, parent, user_info, app_controller):
         super().__init__(parent)
+        self.user_info = user_info
         self.app_controller = app_controller
         self.all_orders = []
         self.create_widgets()
@@ -41,7 +42,8 @@ class OrderView(tk.Frame):
         self.orders_tree.column("id", width=80)
         self.orders_tree.pack(fill=tk.BOTH, expand=True)
 
-        TooltipButton(button_frame, text="New Order (Ctrl+N)", command=self.create_new_order).pack(side=tk.LEFT, padx=5)
+        new_order_button = TooltipButton(button_frame, text="New Order (Ctrl+N)", command=self.create_new_order)
+        new_order_button.pack(side=tk.LEFT, padx=5)
 
         update_status_frame = ttk.Frame(button_frame)
         update_status_frame.pack(side=tk.LEFT, padx=10)
@@ -49,7 +51,13 @@ class OrderView(tk.Frame):
         status_menu = ttk.Combobox(update_status_frame, textvariable=self.status_var, state="readonly",
                                     values=['Received', 'Ready to Pack', 'Ready to Distribute', 'Completed'])
         status_menu.pack(side=tk.LEFT)
-        TooltipButton(update_status_frame, text="Update Status (Ctrl+U)", command=self.update_status).pack(side=tk.LEFT, padx=5)
+        update_status_button = TooltipButton(update_status_frame, text="Update Status (Ctrl+U)", command=self.update_status)
+        update_status_button.pack(side=tk.LEFT, padx=5)
+
+        if self.user_info['role'] in ['Viewer', 'Seller']:
+            new_order_button.configure(state=tk.DISABLED)
+            update_status_button.configure(state=tk.DISABLED)
+            status_menu.configure(state=tk.DISABLED)
 
         TooltipButton(button_frame, text="Back (Esc)", command=self.app_controller.show_main_dashboard).pack(side=tk.RIGHT, padx=5)
 
