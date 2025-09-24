@@ -11,7 +11,7 @@ from gui.help_window import HelpWindow
 
 class App(ThemedTk):
     def __init__(self):
-        super().__init__(theme="adapta")  # Set a modern theme
+        super().__init__() 
         self.title("Inventory and Sales Management System")
         self.minsize(400, 300)
         self.protocol("WM_DELETE_WINDOW", self.on_closing)
