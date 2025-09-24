@@ -3,6 +3,7 @@ from tkinter import ttk, messagebox
 from services import get_dashboard_stats, get_near_expiry_items, get_low_stock_items
 from .widgets.tooltip_button import TooltipButton
 from .detailed_alert_view import DetailedAlertView
+from .user_management_view import UserManagementView
 
 class MainWindow(tk.Frame):
     def __init__(self, parent, user_info, app_controller):
@@ -64,7 +65,7 @@ class MainWindow(tk.Frame):
 
         # Add User Management button only for Admins
         if self.user_info['role'] == 'Admin':
-            users_button = TooltipButton(nav_frame, text="User Management", command=self.show_not_implemented, tooltip_text="This feature is not yet implemented")
+            users_button = TooltipButton(nav_frame, text="User Management", command=self.show_user_management_view, tooltip_text="Manage users")
             users_button.pack(side=tk.LEFT, padx=5)
 
         help_button = TooltipButton(nav_frame, text="Help (Ctrl+H)", command=self.app_controller.show_help_window, tooltip_text="Show Help (Ctrl+H)")
@@ -124,6 +125,14 @@ class MainWindow(tk.Frame):
     def logout(self):
         """Calls the main app controller to handle logout."""
         self.app_controller.show_login_frame()
+
+    def show_user_management_view(self):
+        """Shows the user management view."""
+        if self.app_controller.current_frame:
+            self.app_controller.current_frame.destroy()
+
+        self.app_controller.current_frame = UserManagementView(self.parent, self.app_controller)
+        self.app_controller.current_frame.pack(fill=tk.BOTH, expand=True)
 
     def show_not_implemented(self):
         """Shows a 'Feature not implemented' message."""

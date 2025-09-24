@@ -1,5 +1,6 @@
-import sqlite3
+from sqlcipher3 import dbapi2 as sqlite3
 import hashlib
+import bcrypt
 import os
 
 # Build a path to the database file in the project's root directory
@@ -10,16 +11,22 @@ import os
 # os.path.join(..., '..') goes up one level to the project root
 PROJECT_ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
 DB_FILE = os.path.join(PROJECT_ROOT, "inventory.db")
+DB_KEY = "your-secret-key" # TODO: Use a more secure way to store the key
 
 def get_db_connection():
     """Establishes a connection to the database."""
     conn = sqlite3.connect(DB_FILE)
+    conn.execute(f"PRAGMA key = '{DB_KEY}'")
     conn.row_factory = sqlite3.Row
     return conn
 
 def _hash_password(password):
-    """Hashes a password using SHA-256."""
-    return hashlib.sha256(password.encode('utf-8')).hexdigest()
+    """Hashes a password using bcrypt."""
+    return bcrypt.hashpw(password.encode('utf-8'), bcrypt.gensalt())
+
+def _verify_password(plain_password, hashed_password):
+    """Verifies a password against a hashed version."""
+    return bcrypt.checkpw(plain_password.encode('utf-8'), hashed_password)
 
 def delete_product(product_id):
     """Deletes a product from the database."""
@@ -145,8 +152,10 @@ def initialize_database():
         cursor.execute("INSERT INTO users (username, password_hash, role) VALUES (?, ?, ?)",
                        ('admin', hashed_password, 'Admin'))
     except sqlite3.IntegrityError:
-        # Admin user already exists
-        pass
+        # Admin user already exists, update password to new hash
+        admin_password = "admin"
+        hashed_password = _hash_password(admin_password)
+        cursor.execute("UPDATE users SET password_hash = ? WHERE username = ?", (hashed_password, 'admin'))
 
     conn.commit()
     conn.close()
