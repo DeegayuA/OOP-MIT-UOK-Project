@@ -1,5 +1,6 @@
 import tkinter as tk
 from tkinter import ttk
+import time
 from database import initialize_database
 from ttkthemes import ThemedTk
 from gui.login_window import LoginFrame
@@ -7,22 +8,50 @@ from gui.main_window import MainWindow
 from gui.inventory_view import InventoryView
 from gui.sales_view import SalesView
 from gui.order_view import OrderView
+from gui.help_window import HelpWindow
 
 class App(ThemedTk):
     def __init__(self):
-        super().__init__(theme="adapta")  # Set a modern theme
+        super().__init__() 
         self.title("Inventory and Sales Management System")
-        # Set a min size for the app window
         self.minsize(400, 300)
+        self.protocol("WM_DELETE_WINDOW", self.on_closing)
 
         self.current_user = None
         self.current_frame = None
 
+        self.configure_styles()
         self.show_login_frame()
         self.setup_shortcuts()
 
+    def configure_styles(self):
+        style = ttk.Style()
+        style.configure("Hover.TButton", relief="solid")
+
+    def fade_in_window(self, window):
+        window.attributes("-alpha", 0.0)
+        window.deiconify()
+        start_time = time.time()
+
+        def animate():
+            elapsed = time.time() - start_time
+            alpha = min(elapsed / 0.2, 1.0) # 200ms fade-in
+            window.attributes("-alpha", alpha)
+            if alpha < 1.0:
+                self.after(10, animate)
+
+        self.after(10, animate)
+
     def setup_shortcuts(self):
         self.bind("<Control-n>", lambda event: self.handle_new_item_shortcut())
+        self.bind("<Control-i>", lambda event: self.show_inventory_view())
+        self.bind("<Control-s>", lambda event: self.show_sales_view())
+        self.bind("<Control-o>", lambda event: self.show_order_view())
+        self.bind("<Control-l>", lambda event: self.show_login_frame())
+        self.bind("<Control-h>", lambda event: self.show_help_window())
+
+    def show_help_window(self):
+        HelpWindow(self)
 
     def handle_new_item_shortcut(self):
         # This is a bit of a hack, as we don't know which "new" action to take.
@@ -71,6 +100,7 @@ class App(ThemedTk):
         self.current_frame = MainWindow(self, self.current_user, app_controller=self)
         self.current_frame.pack(fill=tk.BOTH, expand=True)
         self.current_frame.update_stats() # Ensure stats are fresh
+        self.fade_in_window(self)
 
     def show_inventory_view(self):
         """Shows the inventory management view."""
@@ -79,16 +109,8 @@ class App(ThemedTk):
 
         self.title("Inventory Management")
         self.current_frame = InventoryView(self, app_controller=self)
-        # Check if the view has a frame attribute or is a frame itself
-        if hasattr(self.current_frame, 'frame'):
-            self.current_frame.frame.pack(fill=tk.BOTH, expand=True)
-        elif hasattr(self.current_frame, 'pack_frame'):
-            self.current_frame.pack_frame(fill=tk.BOTH, expand=True)
-        else:
-            # Create a frame and add the view to it
-            container = ttk.Frame(self)
-            container.pack(fill=tk.BOTH, expand=True)
-            self.current_frame.master = container
+        self.current_frame.pack(fill=tk.BOTH, expand=True)
+        self.fade_in_window(self)
 
     def show_sales_view(self):
         """Shows the sales view."""
@@ -98,6 +120,7 @@ class App(ThemedTk):
         self.title("New Sale")
         self.current_frame = SalesView(self, app_controller=self)
         self.current_frame.pack(fill=tk.BOTH, expand=True)
+        self.fade_in_window(self)
 
     def show_order_view(self):
         """Shows the order management view."""
@@ -107,6 +130,7 @@ class App(ThemedTk):
         self.title("Order Management")
         self.current_frame = OrderView(self, app_controller=self)
         self.current_frame.pack(fill=tk.BOTH, expand=True)
+        self.fade_in_window(self)
 
     def change_theme(self, theme_name):
         """Changes the application's theme."""
@@ -115,6 +139,10 @@ class App(ThemedTk):
             print(f"Theme changed to {theme_name}")
         except Exception as e:
             print(f"Could not set theme {theme_name}: {e}")
+
+    def on_closing(self):
+        if messagebox.askokcancel("Quit", "Do you want to quit?"):
+            self.destroy()
 
 def main():
     """Main function to run the application."""

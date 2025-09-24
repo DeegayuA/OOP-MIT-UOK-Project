@@ -1,6 +1,8 @@
 import tkinter as tk
 from tkinter import ttk, messagebox
-from services import get_dashboard_stats
+from services import get_dashboard_stats, get_near_expiry_items, get_low_stock_items
+from .widgets.tooltip_button import TooltipButton
+from .detailed_alert_view import DetailedAlertView
 
 class MainWindow(tk.Frame):
     def __init__(self, parent, user_info, app_controller):
@@ -12,6 +14,33 @@ class MainWindow(tk.Frame):
         self.create_widgets()
         self.update_stats()
 
+    def show_near_expiry_details(self, event=None):
+        items = get_near_expiry_items()
+        if not items:
+            messagebox.showinfo("No Items", "There are no items nearing expiry.")
+            return
+
+        columns = {
+            'name': 'Product Name',
+            'batch_number': 'Batch Number',
+            'quantity': 'Quantity',
+            'expiry_date': 'Expiry Date'
+        }
+        DetailedAlertView(self, "Items Nearing Expiry", items, columns)
+
+    def show_low_stock_details(self, event=None):
+        items = get_low_stock_items()
+        if not items:
+            messagebox.showinfo("No Items", "There are no items with low stock.")
+            return
+
+        columns = {
+            'name': 'Product Name',
+            'total_stock': 'Current Stock',
+            'reorder_level': 'Reorder Level'
+        }
+        DetailedAlertView(self, "Low Stock Items", items, columns)
+
     def create_widgets(self):
         # Main layout frames
         nav_frame = ttk.Frame(self)
@@ -21,24 +50,27 @@ class MainWindow(tk.Frame):
         stats_frame.pack(side=tk.TOP, fill=tk.BOTH, expand=True, padx=10, pady=10)
 
         # --- Navigation Buttons ---
-        inventory_button = ttk.Button(nav_frame, text="Inventory", command=self.app_controller.show_inventory_view)
+        inventory_button = TooltipButton(nav_frame, text="Inventory (Ctrl+I)", command=self.app_controller.show_inventory_view, tooltip_text="Open Inventory View (Ctrl+I)")
         inventory_button.pack(side=tk.LEFT, padx=5)
 
-        sales_button = ttk.Button(nav_frame, text="Sales", command=self.app_controller.show_sales_view)
+        sales_button = TooltipButton(nav_frame, text="Sales (Ctrl+S)", command=self.app_controller.show_sales_view, tooltip_text="Open Sales View (Ctrl+S)")
         sales_button.pack(side=tk.LEFT, padx=5)
 
-        orders_button = ttk.Button(nav_frame, text="Orders", command=self.app_controller.show_order_view)
+        orders_button = TooltipButton(nav_frame, text="Orders (Ctrl+O)", command=self.app_controller.show_order_view, tooltip_text="Open Order View (Ctrl+O)")
         orders_button.pack(side=tk.LEFT, padx=5)
 
-        reports_button = ttk.Button(nav_frame, text="Reports", command=self.show_not_implemented)
+        reports_button = TooltipButton(nav_frame, text="Reports", command=self.show_not_implemented, tooltip_text="This feature is not yet implemented")
         reports_button.pack(side=tk.LEFT, padx=5)
 
         # Add User Management button only for Admins
         if self.user_info['role'] == 'Admin':
-            users_button = ttk.Button(nav_frame, text="User Management", command=self.show_not_implemented)
+            users_button = TooltipButton(nav_frame, text="User Management", command=self.show_not_implemented, tooltip_text="This feature is not yet implemented")
             users_button.pack(side=tk.LEFT, padx=5)
 
-        logout_button = ttk.Button(nav_frame, text="Logout", command=self.logout)
+        help_button = TooltipButton(nav_frame, text="Help (Ctrl+H)", command=self.app_controller.show_help_window, tooltip_text="Show Help (Ctrl+H)")
+        help_button.pack(side=tk.LEFT, padx=5)
+
+        logout_button = TooltipButton(nav_frame, text="Logout (Ctrl+L)", command=self.logout, tooltip_text="Logout (Ctrl+L)")
         logout_button.pack(side=tk.RIGHT, padx=5)
 
         # --- Statistics Frames ---
@@ -59,16 +91,21 @@ class MainWindow(tk.Frame):
         self.sales_label.pack(padx=20, pady=20)
 
         # Near Expiry Items
-        expiry_labelframe = ttk.LabelFrame(stats_frame, text="⚠ Items Nearing Expiry (30 days)")
+        expiry_labelframe = ttk.LabelFrame(stats_frame, text="⚠ Items Nearing Expiry (30 days)", cursor="hand2")
         expiry_labelframe.grid(row=0, column=1, padx=10, pady=10, sticky="ew")
         self.expiry_label = ttk.Label(expiry_labelframe, text="0 Items", font=("Arial", 24), style="Orange.TLabel")
         self.expiry_label.pack(padx=20, pady=20)
+        expiry_labelframe.bind("<Button-1>", self.show_near_expiry_details)
+        self.expiry_label.bind("<Button-1>", self.show_near_expiry_details)
+
 
         # Low Stock Alerts
-        stock_labelframe = ttk.LabelFrame(stats_frame, text="🔥 Low Stock Alerts")
+        stock_labelframe = ttk.LabelFrame(stats_frame, text="🔥 Low Stock Alerts", cursor="hand2")
         stock_labelframe.grid(row=0, column=2, padx=10, pady=10, sticky="ew")
         self.stock_label = ttk.Label(stock_labelframe, text="0 Items", font=("Arial", 24), style="Red.TLabel")
         self.stock_label.pack(padx=20, pady=20)
+        stock_labelframe.bind("<Button-1>", self.show_low_stock_details)
+        self.stock_label.bind("<Button-1>", self.show_low_stock_details)
 
     def update_stats(self):
         """Fetches stats from the service layer and updates the UI."""
