@@ -71,6 +71,7 @@ class UserManagementView(ttk.Frame):
     def add_user_dialog(self):
         # Dialog for adding a new user
         dialog = UserDialog(self, title="Add User")
+        self.wait_window(dialog)
         if dialog.result:
             username, password, role = dialog.result
             try:
@@ -87,9 +88,8 @@ class UserManagementView(ttk.Frame):
             return
 
         user_id = self.tree.item(selected_item)['values'][0]
-        # Fetch user details to pre-fill the dialog
-        # For now, we'll just open a dialog and the user has to re-enter all details
         dialog = UserDialog(self, title="Edit User", user_id=user_id)
+        self.wait_window(dialog)
         if dialog.result:
             username, password, role, is_active = dialog.result
             try:
@@ -143,18 +143,26 @@ class UserDialog(tk.Toplevel):
                 self.is_active.set(user_data['is_active'])
 
     def create_widgets(self):
+        self.bind('<Escape>', lambda e: self.destroy())
+
         form_frame = ttk.Frame(self, padding="10")
         form_frame.pack(expand=True, fill="both")
 
         ttk.Label(form_frame, text="Username:").grid(row=0, column=0, sticky="w", pady=5)
-        ttk.Entry(form_frame, textvariable=self.username).grid(row=0, column=1, sticky="ew")
+        username_entry = ttk.Entry(form_frame, textvariable=self.username)
+        username_entry.grid(row=0, column=1, sticky="ew")
+        username_entry.bind("<Return>", lambda e: self.on_ok())
+
 
         ttk.Label(form_frame, text="Password:").grid(row=1, column=0, sticky="w", pady=5)
-        ttk.Entry(form_frame, textvariable=self.password, show="*").grid(row=1, column=1, sticky="ew")
+        password_entry = ttk.Entry(form_frame, textvariable=self.password, show="*")
+        password_entry.grid(row=1, column=1, sticky="ew")
+        password_entry.bind("<Return>", lambda e: self.on_ok())
 
         ttk.Label(form_frame, text="Role:").grid(row=2, column=0, sticky="w", pady=5)
         role_menu = ttk.Combobox(form_frame, textvariable=self.role, values=['Viewer', 'Seller', 'Manager', 'Admin'])
         role_menu.grid(row=2, column=1, sticky="ew")
+        role_menu.bind("<Return>", lambda e: self.on_ok())
 
         if self.user_id:
             ttk.Checkbutton(form_frame, text="Active", variable=self.is_active).grid(row=3, columnspan=2, pady=5)
