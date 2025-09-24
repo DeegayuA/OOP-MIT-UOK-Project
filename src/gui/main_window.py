@@ -128,6 +128,10 @@ class MainWindow(tk.Frame):
 
     def show_user_management_view(self):
         """Shows the user management view."""
+        if self.user_info['role'] != 'Admin':
+            messagebox.showerror("Access Denied", "You do not have permission to access this feature.")
+            return
+
         if self.app_controller.current_frame:
             self.app_controller.current_frame.destroy()
 

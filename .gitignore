@@ -130,11 +130,7 @@ dmypy.json
 .pyre/
 
 # SQLite databases
-*.db
-*.sqlite
-*.sqlite3
-*.db-journal
-*.db-wal
+db.key
 
 # VS Code
 .vscode/
