@@ -97,7 +97,7 @@ class App(ThemedTk):
             self.current_frame.destroy()
 
         self.title("Main Dashboard")
-        self.center_window(1100, 600)
+        self.center_window(1000, 600)
         self.current_frame = MainWindow(self, self.current_user, app_controller=self)
         self.current_frame.pack(fill=tk.BOTH, expand=True)
         self.current_frame.update_stats() # Ensure stats are fresh
