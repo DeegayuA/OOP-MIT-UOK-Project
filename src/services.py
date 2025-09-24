@@ -246,6 +246,110 @@ def create_sale(user_id, customer_id, cart, discount=0):
 
 # --- Sales Management Services ---
 
+def get_inventory_report():
+    """
+    Retrieves a report of the current inventory, including total stock and value.
+    """
+    conn = get_db_connection()
+    try:
+        cursor = conn.execute("""
+            SELECT
+                p.product_id,
+                p.name,
+                p.category,
+                IFNULL(SUM(b.quantity), 0) as total_stock,
+                IFNULL(SUM(b.quantity * b.cost_price), 0) as total_cost_value
+            FROM products p
+            LEFT JOIN batches b ON p.product_id = b.product_id
+            GROUP BY p.product_id
+            ORDER BY p.name
+        """)
+        report_data = cursor.fetchall()
+        return [dict(row) for row in report_data]
+    finally:
+        conn.close()
+
+def get_sales_summary(start_date, end_date):
+    """
+    Calculates the sales summary (revenue, cogs) for a given date range.
+    """
+    conn = get_db_connection()
+    try:
+        start_datetime = f"{start_date} 00:00:00"
+        end_datetime = f"{end_date} 23:59:59"
+
+        cursor = conn.execute("""
+            SELECT
+                IFNULL(SUM(si.quantity_sold * si.price_per_unit), 0) as total_revenue,
+                IFNULL(SUM(si.quantity_sold * b.cost_price), 0) as total_cogs
+            FROM sale_items si
+            JOIN sales s ON si.sale_id = s.sale_id
+            JOIN batches b ON si.batch_id = b.batch_id
+            WHERE s.sale_date BETWEEN ? AND ?
+        """, (start_datetime, end_datetime))
+        summary_data = cursor.fetchone()
+        return dict(summary_data)
+    finally:
+        conn.close()
+
+def get_product_performance_report(start_date, end_date):
+    """
+    Retrieves product performance data for a given date range.
+    """
+    conn = get_db_connection()
+    try:
+        start_datetime = f"{start_date} 00:00:00"
+        end_datetime = f"{end_date} 23:59:59"
+
+        cursor = conn.execute("""
+            SELECT
+                p.product_id,
+                p.name as product_name,
+                p.category,
+                SUM(si.quantity_sold) as total_quantity_sold,
+                SUM(si.quantity_sold * si.price_per_unit) as total_revenue
+            FROM sale_items si
+            JOIN sales s ON si.sale_id = s.sale_id
+            JOIN batches b ON si.batch_id = b.batch_id
+            JOIN products p ON b.product_id = p.product_id
+            WHERE s.sale_date BETWEEN ? AND ?
+            GROUP BY p.product_id
+            ORDER BY total_revenue DESC
+        """, (start_datetime, end_datetime))
+        report_data = cursor.fetchall()
+        return [dict(row) for row in report_data]
+    finally:
+        conn.close()
+
+def get_sales_report(start_date, end_date):
+    """
+    Retrieves sales data for a given date range, including cashier and customer names.
+    """
+    conn = get_db_connection()
+    try:
+        # Ensure the time part is included for accurate range filtering
+        start_datetime = f"{start_date} 00:00:00"
+        end_datetime = f"{end_date} 23:59:59"
+
+        cursor = conn.execute("""
+            SELECT
+                s.sale_id,
+                s.sale_date,
+                s.total_amount,
+                s.discount_applied,
+                u.username,
+                c.name as customer_name
+            FROM sales s
+            JOIN users u ON s.user_id = u.user_id
+            LEFT JOIN customers c ON s.customer_id = c.customer_id
+            WHERE s.sale_date BETWEEN ? AND ?
+            ORDER BY s.sale_date DESC
+        """, (start_datetime, end_datetime))
+        report_data = cursor.fetchall()
+        return [dict(row) for row in report_data]
+    finally:
+        conn.close()
+
 def get_all_customers():
     """Retrieves all customers from the database."""
     conn = get_db_connection()

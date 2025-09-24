@@ -64,7 +64,7 @@ class MainWindow(tk.Frame):
             sales_button.configure(state=tk.DISABLED)
             orders_button.configure(state=tk.DISABLED)
 
-        reports_button = TooltipButton(nav_frame, text="Reports", command=self.show_not_implemented, tooltip_text="This feature is not yet implemented")
+        reports_button = TooltipButton(nav_frame, text="Reports (Ctrl+R)", command=self.app_controller.show_reports_view, tooltip_text="Open Reports View (Ctrl+R)")
         reports_button.pack(side=tk.LEFT, padx=5)
 
         # Add User Management button only for Admins
