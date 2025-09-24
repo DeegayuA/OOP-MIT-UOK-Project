@@ -280,15 +280,15 @@ def get_sales_summary(start_date, end_date):
 
         cursor = conn.execute("""
             SELECT
-                SUM(si.quantity_sold * si.price_per_unit) as total_revenue,
-                SUM(si.quantity_sold * b.cost_price) as total_cogs
+                IFNULL(SUM(si.quantity_sold * si.price_per_unit), 0) as total_revenue,
+                IFNULL(SUM(si.quantity_sold * b.cost_price), 0) as total_cogs
             FROM sale_items si
             JOIN sales s ON si.sale_id = s.sale_id
             JOIN batches b ON si.batch_id = b.batch_id
             WHERE s.sale_date BETWEEN ? AND ?
         """, (start_datetime, end_datetime))
         summary_data = cursor.fetchone()
-        return dict(summary_data) if summary_data else {'total_revenue': 0, 'total_cogs': 0}
+        return dict(summary_data)
     finally:
         conn.close()
 
