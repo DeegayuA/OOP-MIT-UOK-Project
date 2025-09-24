@@ -1,5 +1,6 @@
-import sqlite3
+from sqlcipher3 import dbapi2 as sqlite3
 import hashlib
+import bcrypt
 import os
 
 # Build a path to the database file in the project's root directory
@@ -10,16 +11,58 @@ import os
 # os.path.join(..., '..') goes up one level to the project root
 PROJECT_ROOT = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
 DB_FILE = os.path.join(PROJECT_ROOT, "inventory.db")
+KEY_FILE = os.path.join(PROJECT_ROOT, "db.key")
+
+def get_or_create_db_key():
+    """
+    Reads the database key from KEY_FILE or generates a new one.
+    Returns the key as a hex string.
+    """
+    if os.path.exists(KEY_FILE):
+        with open(KEY_FILE, 'r') as f:
+            return f.read().strip()
+    else:
+        new_key = os.urandom(32).hex()
+        with open(KEY_FILE, 'w') as f:
+            f.write(new_key)
+        return new_key
+
+DB_KEY = get_or_create_db_key()
 
 def get_db_connection():
     """Establishes a connection to the database."""
     conn = sqlite3.connect(DB_FILE)
+    try:
+        conn.execute(f"PRAGMA key = '{DB_KEY}'")
+        # Test the connection to see if the key is correct
+        conn.execute("SELECT count(*) FROM sqlite_master;")
+    except sqlite3.DatabaseError:
+        # This can happen if the key is wrong or the db is corrupt.
+        # As per the user's request, we delete the db and re-initialize.
+        conn.close()
+        if os.path.exists(DB_FILE):
+            print("WARNING: Database file is corrupt or key is incorrect. Deleting and re-initializing database.")
+            os.remove(DB_FILE)
+
+        # Create a new connection for initialization
+        init_conn = sqlite3.connect(DB_FILE)
+        init_conn.execute(f"PRAGMA key = '{DB_KEY}'")
+        initialize_database(init_conn)
+
+        # Now, the main connection should work
+        conn = sqlite3.connect(DB_FILE)
+        conn.execute(f"PRAGMA key = '{DB_KEY}'")
+
     conn.row_factory = sqlite3.Row
     return conn
 
 def _hash_password(password):
-    """Hashes a password using SHA-256."""
-    return hashlib.sha256(password.encode('utf-8')).hexdigest()
+    """Hashes a password using bcrypt."""
+    return bcrypt.hashpw(password.encode('utf-8'), bcrypt.gensalt())
+
+def _verify_password(plain_password, hashed_password):
+    """Verifies a password against a hashed version."""
+    return bcrypt.checkpw(plain_password.encode('utf-8'), hashed_password)
 
 def delete_product(product_id):
     """Deletes a product from the database."""
@@ -39,9 +82,16 @@ def delete_batch(batch_id):
     finally:
         conn.close()
 
-def initialize_database():
-    """Initializes the database and creates tables if they don't exist."""
-    conn = get_db_connection()
+def initialize_database(conn=None):
+    """
+    Initializes the database and creates tables if they don't exist.
+    If a connection object is provided, it uses it. Otherwise, it creates a new one.
+    """
+    close_conn = False
+    if conn is None:
+        conn = get_db_connection()
+        close_conn = True
+
     cursor = conn.cursor()
 
     # User Management
@@ -50,7 +100,7 @@ def initialize_database():
         user_id INTEGER PRIMARY KEY AUTOINCREMENT,
         username TEXT NOT NULL UNIQUE,
         password_hash TEXT NOT NULL,
-        role TEXT NOT NULL CHECK(role IN ('Admin', 'Staff')),
+        role TEXT NOT NULL CHECK(role IN ('Viewer', 'Seller', 'Manager', 'Admin')),
         is_active BOOLEAN NOT NULL DEFAULT 1
     )""")
 
@@ -145,9 +195,10 @@ def initialize_database():
         cursor.execute("INSERT INTO users (username, password_hash, role) VALUES (?, ?, ?)",
                        ('admin', hashed_password, 'Admin'))
     except sqlite3.IntegrityError:
-        # Admin user already exists
+        # Admin user already exists, do nothing.
         pass
 
     conn.commit()
-    conn.close()
+    if close_conn:
+        conn.close()
     print("Database initialized successfully.")

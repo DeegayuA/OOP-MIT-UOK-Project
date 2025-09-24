@@ -2,7 +2,7 @@
 Service Layer: Contains the business logic of the application.
 Coordinates tasks between the GUI and the Data Access Layer.
 """
-from database import get_db_connection, _hash_password
+from database import get_db_connection, _hash_password, _verify_password
 from datetime import date, timedelta
 
 PRODUCT_CATEGORIES = ["Water", "Soft Drink", "Juice", "Snack"]
@@ -15,6 +15,69 @@ def log_activity(user_id, action_description):
             "INSERT INTO activity_logs (user_id, action_description) VALUES (?, ?)",
             (user_id, action_description)
         )
+        conn.commit()
+    finally:
+        conn.close()
+
+# --- User Management Services ---
+
+def get_all_users():
+    """Retrieves all users from the database."""
+    conn = get_db_connection()
+    try:
+        cursor = conn.execute("SELECT user_id, username, role, is_active FROM users ORDER BY username")
+        users = cursor.fetchall()
+        return [dict(row) for row in users]
+    finally:
+        conn.close()
+
+def get_user_by_id(user_id):
+    """Retrieves a single user by their ID."""
+    conn = get_db_connection()
+    try:
+        cursor = conn.execute("SELECT user_id, username, role, is_active FROM users WHERE user_id = ?", (user_id,))
+        user = cursor.fetchone()
+        return dict(user) if user else None
+    finally:
+        conn.close()
+
+def create_user(username, password, role):
+    """Creates a new user."""
+    conn = get_db_connection()
+    try:
+        hashed_password = _hash_password(password)
+        conn.execute(
+            "INSERT INTO users (username, password_hash, role) VALUES (?, ?, ?)",
+            (username, hashed_password, role)
+        )
+        conn.commit()
+    finally:
+        conn.close()
+
+def update_user(user_id, username, password, role, is_active):
+    """Updates an existing user."""
+    conn = get_db_connection()
+    try:
+        if password:
+            hashed_password = _hash_password(password)
+            conn.execute(
+                "UPDATE users SET username = ?, password_hash = ?, role = ?, is_active = ? WHERE user_id = ?",
+                (username, hashed_password, role, is_active, user_id)
+            )
+        else:
+            conn.execute(
+                "UPDATE users SET username = ?, role = ?, is_active = ? WHERE user_id = ?",
+                (username, role, is_active, user_id)
+            )
+        conn.commit()
+    finally:
+        conn.close()
+
+def delete_user(user_id):
+    """Deletes a user from the database."""
+    conn = get_db_connection()
+    try:
+        conn.execute("DELETE FROM users WHERE user_id = ?", (user_id,))
         conn.commit()
     finally:
         conn.close()
@@ -103,16 +166,16 @@ def update_order_status(order_id, new_status):
     finally:
         conn.close()
 
-def create_sale(user_id, customer_id, cart):
+def create_sale(user_id, customer_id, cart, discount=0):
     """
     Creates a new sale, updating batch quantities transactionally.
     `cart` is a list of dictionaries, e.g., [{'product_id': 1, 'quantity': 2}, ...]
     """
     conn = get_db_connection()
     try:
-        total_amount = 0
+        subtotal = 0
 
-        # First, calculate total amount and check stock availability
+        # First, calculate subtotal and check stock availability
         for item in cart:
             product_id = item['product_id']
             quantity_to_sell = item['quantity']
@@ -126,15 +189,18 @@ def create_sale(user_id, customer_id, cart):
                 raise ValueError(f"Not enough stock for product ID {product_id}. Available: {total_stock}, Requested: {quantity_to_sell}")
 
             # The price is determined by the first batch we'd sell from
-            total_amount += batches[0]['selling_price'] * quantity_to_sell
+            subtotal += batches[0]['selling_price'] * quantity_to_sell
+
+        discount_amount = (subtotal * discount) / 100
+        total_amount = subtotal - discount_amount
 
         # --- Begin Transaction ---
         cursor = conn.cursor()
 
         # 1. Create the sale record
         cursor.execute(
-            "INSERT INTO sales (user_id, customer_id, total_amount) VALUES (?, ?, ?)",
-            (user_id, customer_id, total_amount)
+            "INSERT INTO sales (user_id, customer_id, total_amount, discount_applied) VALUES (?, ?, ?, ?)",
+            (user_id, customer_id, total_amount, discount_amount)
         )
         sale_id = cursor.lastrowid
 
@@ -305,9 +371,8 @@ def authenticate_user(username, password):
         return None # User is not active
 
     stored_hash = user_data['password_hash']
-    provided_hash = _hash_password(password)
 
-    if stored_hash == provided_hash:
+    if _verify_password(password, stored_hash):
         user_info = {
             'user_id': user_data['user_id'],
             'username': user_data['username'],

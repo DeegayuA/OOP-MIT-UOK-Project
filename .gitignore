@@ -130,6 +130,7 @@ dmypy.json
 .pyre/
 
 # SQLite databases
+db.key
 *.db
 *.sqlite
 *.sqlite3
