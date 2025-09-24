@@ -31,6 +31,16 @@ def get_all_users():
     finally:
         conn.close()
 
+def get_user_by_id(user_id):
+    """Retrieves a single user by their ID."""
+    conn = get_db_connection()
+    try:
+        cursor = conn.execute("SELECT user_id, username, role, is_active FROM users WHERE user_id = ?", (user_id,))
+        user = cursor.fetchone()
+        return dict(user) if user else None
+    finally:
+        conn.close()
+
 def create_user(username, password, role):
     """Creates a new user."""
     conn = get_db_connection()

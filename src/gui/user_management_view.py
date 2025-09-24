@@ -1,15 +1,23 @@
 import tkinter as tk
 from tkinter import ttk, messagebox
-from services import get_all_users, create_user, update_user, delete_user
+from services import get_all_users, create_user, update_user, delete_user, get_user_by_id
 
 class UserManagementView(ttk.Frame):
-    def __init__(self, parent, app_controller):
+    def __init__(self, parent, user_info, app_controller):
         super().__init__(parent)
+        self.user_info = user_info
         self.app_controller = app_controller
         self.create_widgets()
         self.load_users()
 
     def create_widgets(self):
+        # Top frame for navigation
+        top_frame = ttk.Frame(self, padding="10")
+        top_frame.pack(fill='x', side='top')
+        back_button = ttk.Button(top_frame, text="< Back to Dashboard", command=self.back_to_dashboard)
+        back_button.pack(side='left')
+        ttk.Label(top_frame, text="User Management", font=("Arial", 16)).pack(side='left', padx=20)
+
         # Frame for the Treeview and Scrollbar
         tree_frame = ttk.Frame(self)
         tree_frame.pack(expand=True, fill='both', padx=10, pady=10)
@@ -46,9 +54,6 @@ class UserManagementView(ttk.Frame):
 
         delete_button = ttk.Button(button_frame, text="Delete User", command=self.delete_user)
         delete_button.pack(side='left', padx=5)
-
-        back_button = ttk.Button(button_frame, text="Back to Dashboard", command=self.back_to_dashboard)
-        back_button.pack(side='right', padx=5)
 
     def back_to_dashboard(self):
         self.app_controller.show_main_dashboard()
@@ -101,6 +106,11 @@ class UserManagementView(ttk.Frame):
             return
 
         user_id = self.tree.item(selected_item)['values'][0]
+
+        if user_id == self.user_info['user_id']:
+            messagebox.showerror("Error", "You cannot delete your own account.")
+            return
+
         if messagebox.askyesno("Confirm", "Are you sure you want to delete this user?"):
             try:
                 delete_user(user_id)
@@ -126,9 +136,11 @@ class UserDialog(tk.Toplevel):
         self.create_widgets()
 
         if self.user_id:
-            # In a real app, you'd load the user's current data here
-            # For simplicity, we'll just have the user re-enter everything
-            pass
+            user_data = get_user_by_id(self.user_id)
+            if user_data:
+                self.username.set(user_data['username'])
+                self.role.set(user_data['role'])
+                self.is_active.set(user_data['is_active'])
 
     def create_widgets(self):
         form_frame = ttk.Frame(self, padding="10")

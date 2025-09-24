@@ -131,6 +131,11 @@ dmypy.json
 
 # SQLite databases
 db.key
+*.db
+*.sqlite
+*.sqlite3
+*.db-journal
+*.db-wal
 
 # VS Code
 .vscode/

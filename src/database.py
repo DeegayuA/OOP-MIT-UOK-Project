@@ -41,6 +41,7 @@ def get_db_connection():
         # As per the user's request, we delete the db and re-initialize.
         conn.close()
         if os.path.exists(DB_FILE):
+            print("WARNING: Database file is corrupt or key is incorrect. Deleting and re-initializing database.")
             os.remove(DB_FILE)
 
         # Create a new connection for initialization
@@ -194,10 +195,8 @@ def initialize_database(conn=None):
         cursor.execute("INSERT INTO users (username, password_hash, role) VALUES (?, ?, ?)",
                        ('admin', hashed_password, 'Admin'))
     except sqlite3.IntegrityError:
-        # Admin user already exists, update password to new hash
-        admin_password = "admin"
-        hashed_password = _hash_password(admin_password)
-        cursor.execute("UPDATE users SET password_hash = ? WHERE username = ?", (hashed_password, 'admin'))
+        # Admin user already exists, do nothing.
+        pass
 
     conn.commit()
     if close_conn:

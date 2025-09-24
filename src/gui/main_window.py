@@ -139,7 +139,7 @@ class MainWindow(tk.Frame):
         if self.app_controller.current_frame:
             self.app_controller.current_frame.destroy()
 
-        self.app_controller.current_frame = UserManagementView(self.parent, self.app_controller)
+        self.app_controller.current_frame = UserManagementView(self.parent, self.user_info, self.app_controller)
         self.app_controller.current_frame.pack(fill=tk.BOTH, expand=True)
 
     def show_not_implemented(self):

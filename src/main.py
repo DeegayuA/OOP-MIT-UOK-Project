@@ -1,5 +1,5 @@
 import tkinter as tk
-from tkinter import ttk, messagebox
+from tkinter import ttk
 import time
 from database import initialize_database
 from ttkthemes import ThemedTk
