@@ -1,6 +1,6 @@
 import tkinter as tk
 from tkinter import ttk, messagebox
-from services import get_dashboard_stats, get_near_expiry_items, get_low_stock_items
+from services import get_dashboard_stats, get_near_expiry_items, get_low_stock_items, get_recent_sales
 from .widgets.tooltip_button import TooltipButton
 from .detailed_alert_view import DetailedAlertView
 from .user_management_view import UserManagementView
@@ -125,6 +125,41 @@ class MainWindow(tk.Frame):
         stock_labelframe.bind("<Button-1>", self.show_low_stock_details)
         self.stock_label.bind("<Button-1>", self.show_low_stock_details)
 
+        # --- Data Tables ---
+        tables_frame = ttk.Frame(main_content)
+        tables_frame.grid(row=1, column=0, columnspan=3, sticky="nsew", padx=10, pady=10)
+        tables_frame.grid_columnconfigure(0, weight=1)
+        main_content.grid_rowconfigure(1, weight=1)
+
+        # Recent Sales Table
+        sales_table_frame = ttk.LabelFrame(tables_frame, text="Recent Sales")
+        sales_table_frame.grid(row=0, column=0, sticky="nsew", padx=5, pady=5)
+        self.sales_tree = ttk.Treeview(sales_table_frame, columns=("id", "date", "customer", "total"), show="headings", height=5)
+        self.sales_tree.heading("id", text="ID")
+        self.sales_tree.heading("date", text="Date")
+        self.sales_tree.heading("customer", text="Customer")
+        self.sales_tree.heading("total", text="Total")
+        self.sales_tree.pack(fill="both", expand=True, padx=5, pady=5)
+
+        # Near Expiry Table
+        expiry_table_frame = ttk.LabelFrame(tables_frame, text="Nearing Expiry")
+        expiry_table_frame.grid(row=0, column=1, sticky="nsew", padx=5, pady=5)
+        self.expiry_tree = ttk.Treeview(expiry_table_frame, columns=("product", "batch", "qty", "expiry_date"), show="headings", height=5)
+        self.expiry_tree.heading("product", text="Product")
+        self.expiry_tree.heading("batch", text="Batch")
+        self.expiry_tree.heading("qty", text="Quantity")
+        self.expiry_tree.heading("expiry_date", text="Expiry Date")
+        self.expiry_tree.pack(fill="both", expand=True, padx=5, pady=5)
+
+        # Low Stock Table
+        low_stock_table_frame = ttk.LabelFrame(tables_frame, text="Low Stock")
+        low_stock_table_frame.grid(row=0, column=2, sticky="nsew", padx=5, pady=5)
+        self.low_stock_tree = ttk.Treeview(low_stock_table_frame, columns=("product", "stock", "reorder_level"), show="headings", height=5)
+        self.low_stock_tree.heading("product", text="Product")
+        self.low_stock_tree.heading("stock", text="Stock")
+        self.low_stock_tree.heading("reorder_level", text="Reorder Level")
+        self.low_stock_tree.pack(fill="both", expand=True, padx=5, pady=5)
+
     def update_stats(self):
         """Fetches stats from the service layer and updates the UI."""
         try:
@@ -132,12 +167,53 @@ class MainWindow(tk.Frame):
             self.sales_label.config(text=f"{stats['total_sales_today']:.2f} LKR")
             self.expiry_label.config(text=f"{stats['near_expiry_items']} Items")
             self.stock_label.config(text=f"{stats['low_stock_items']} Items")
+            self.update_tables()
         except Exception as e:
             print(f"Error updating dashboard stats: {e}")
             # Optionally show an error message in the UI
             self.sales_label.config(text="Error")
             self.expiry_label.config(text="Error")
             self.stock_label.config(text="Error")
+
+    def update_tables(self):
+        """Fetches data and populates the dashboard tables."""
+        try:
+            # Clear existing data
+            for tree in [self.sales_tree, self.expiry_tree, self.low_stock_tree]:
+                tree.delete(*tree.get_children())
+
+            # Populate Recent Sales
+            recent_sales = get_recent_sales()
+            for sale in recent_sales:
+                self.sales_tree.insert("", "end", values=(
+                    sale['sale_id'],
+                    sale['sale_date'],
+                    sale['customer_name'] or "N/A",
+                    f"{sale['total_amount']:.2f} LKR"
+                ))
+
+            # Populate Near Expiry Items
+            near_expiry_items = get_near_expiry_items()
+            for item in near_expiry_items:
+                self.expiry_tree.insert("", "end", values=(
+                    item['name'],
+                    item['batch_number'],
+                    item['quantity'],
+                    item['expiry_date']
+                ))
+
+            # Populate Low Stock Items
+            low_stock_items = get_low_stock_items()
+            for item in low_stock_items:
+                self.low_stock_tree.insert("", "end", values=(
+                    item['name'],
+                    item['total_stock'],
+                    item['reorder_level']
+                ))
+
+        except Exception as e:
+            print(f"Error updating dashboard tables: {e}")
+            messagebox.showerror("Error", "Could not update dashboard tables.")
 
     def logout(self):
         """Calls the main app controller to handle logout."""

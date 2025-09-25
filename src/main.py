@@ -13,7 +13,7 @@ from gui.help_window import HelpWindow
 
 class App(ThemedTk):
     def __init__(self):
-        super().__init__()
+        super().__init__(theme="radiance")
         self.title("Inventory and Sales Management System")
         self.minsize(400, 300)
         self.protocol("WM_DELETE_WINDOW", self.on_closing)
@@ -28,7 +28,7 @@ class App(ThemedTk):
     def configure_styles(self):
         style = ttk.Style()
         style.configure("Hover.TButton", relief="solid")
-        style.configure("Card.TFrame", relief="raised", borderwidth=0)
+        style.configure("Card.TFrame", relief="raised", borderwidth=2)
 
     def fade_in_window(self, window):
         window.attributes("-alpha", 0.0)
@@ -117,7 +117,7 @@ class App(ThemedTk):
         """Shows the main dashboard view."""
         def _switch():
             self.title("Main Dashboard")
-            self.center_window(1200, 600)
+            self.center_window(1000, 600)
             self.current_frame = MainWindow(self, self.current_user, app_controller=self)
             self.current_frame.pack(fill=tk.BOTH, expand=True)
             self.current_frame.update_stats()
