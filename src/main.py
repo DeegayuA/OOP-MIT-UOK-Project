@@ -53,7 +53,7 @@ class App(ThemedTk):
 
         def animate():
             elapsed = time.time() - start_time
-            alpha = max(1.0 - (elapsed / 0.1), 0.0) # 200ms fade-out
+            alpha = max(1.0 - (elapsed / 0.2), 0.0) # 200ms fade-out
             self.attributes("-alpha", alpha)
             if alpha > 0.0:
                 self.after(10, animate)

@@ -116,7 +116,8 @@ class MainWindow(tk.Frame):
         expiry_labelframe.bind("<Button-1>", self.show_near_expiry_details)
         self.expiry_label.bind("<Button-1>", self.show_near_expiry_details)
 
-
+        # Add cursor pointer for expiry items
+        self.expiry_label.configure(cursor="hand2")
         # Low Stock Alerts
         stock_labelframe = ttk.LabelFrame(stats_frame, text="🔥 Low Stock Alerts", cursor="hand2")
         stock_labelframe.grid(row=0, column=2, padx=10, pady=10, sticky="ew")
@@ -125,40 +126,42 @@ class MainWindow(tk.Frame):
         stock_labelframe.bind("<Button-1>", self.show_low_stock_details)
         self.stock_label.bind("<Button-1>", self.show_low_stock_details)
 
-        # --- Data Tables ---
-        tables_frame = ttk.Frame(main_content)
-        tables_frame.grid(row=1, column=0, columnspan=3, sticky="nsew", padx=10, pady=10)
-        tables_frame.grid_columnconfigure(0, weight=1)
+        # These settings are already defined above
         main_content.grid_rowconfigure(1, weight=1)
-
+        
+        # Create tables frame for the second row
+        tables_frame = ttk.Frame(main_content)
+        tables_frame.grid(row=1, column=0, columnspan=3, sticky="nsew", padx=3, pady=5)
+        tables_frame.grid_columnconfigure((0, 1, 2), weight=1)
+        
         # Recent Sales Table
         sales_table_frame = ttk.LabelFrame(tables_frame, text="Recent Sales")
-        sales_table_frame.grid(row=0, column=0, sticky="nsew", padx=5, pady=5)
-        self.sales_tree = ttk.Treeview(sales_table_frame, columns=("id", "date", "customer", "total"), show="headings", height=5)
-        self.sales_tree.heading("id", text="ID")
+        sales_table_frame.grid(row=0, column=0, sticky="nsew", padx=3, pady=5)
+        self.sales_tree = ttk.Treeview(sales_table_frame, columns=("sale_id", "date", "customer", "amount"), show="headings", height=5)
+        self.sales_tree.heading("sale_id", text="Sale ID")
         self.sales_tree.heading("date", text="Date")
         self.sales_tree.heading("customer", text="Customer")
-        self.sales_tree.heading("total", text="Total")
-        self.sales_tree.pack(fill="both", expand=True, padx=5, pady=5)
-
+        self.sales_tree.heading("amount", text="Amount")
+        self.sales_tree.pack(fill="both", expand=True, padx=3, pady=5)
+        
         # Near Expiry Table
         expiry_table_frame = ttk.LabelFrame(tables_frame, text="Nearing Expiry")
-        expiry_table_frame.grid(row=0, column=1, sticky="nsew", padx=5, pady=5)
+        expiry_table_frame.grid(row=0, column=1, sticky="nsew", padx=3, pady=5)
         self.expiry_tree = ttk.Treeview(expiry_table_frame, columns=("product", "batch", "qty", "expiry_date"), show="headings", height=5)
         self.expiry_tree.heading("product", text="Product")
         self.expiry_tree.heading("batch", text="Batch")
         self.expiry_tree.heading("qty", text="Quantity")
         self.expiry_tree.heading("expiry_date", text="Expiry Date")
-        self.expiry_tree.pack(fill="both", expand=True, padx=5, pady=5)
-
+        self.expiry_tree.pack(fill="both", expand=True, padx=3, pady=5)
+        
         # Low Stock Table
         low_stock_table_frame = ttk.LabelFrame(tables_frame, text="Low Stock")
-        low_stock_table_frame.grid(row=0, column=2, sticky="nsew", padx=5, pady=5)
+        low_stock_table_frame.grid(row=0, column=2, sticky="nsew", padx=3, pady=5)
         self.low_stock_tree = ttk.Treeview(low_stock_table_frame, columns=("product", "stock", "reorder_level"), show="headings", height=5)
         self.low_stock_tree.heading("product", text="Product")
         self.low_stock_tree.heading("stock", text="Stock")
         self.low_stock_tree.heading("reorder_level", text="Reorder Level")
-        self.low_stock_tree.pack(fill="both", expand=True, padx=5, pady=5)
+        self.low_stock_tree.pack(fill="both", expand=True, padx=3, pady=5)
 
     def update_stats(self):
         """Fetches stats from the service layer and updates the UI."""
