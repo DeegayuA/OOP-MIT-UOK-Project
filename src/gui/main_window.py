@@ -43,40 +43,53 @@ class MainWindow(tk.Frame):
         DetailedAlertView(self, "Low Stock Items", items, columns)
 
     def create_widgets(self):
-        # Main layout frames
-        nav_frame = ttk.Frame(self)
-        nav_frame.pack(side=tk.TOP, fill=tk.X, padx=10, pady=5)
+        # Header frame for greeting and navigation
+        header_frame = ttk.Frame(self)
+        header_frame.pack(side=tk.TOP, fill=tk.X, padx=10, pady=5)
 
-        stats_frame = ttk.Frame(self)
-        stats_frame.pack(side=tk.TOP, fill=tk.BOTH, expand=True, padx=10, pady=10)
+        # Welcome message
+        welcome_text = f"Welcome, {self.user_info.get('username', 'User')}!"
+        welcome_label = ttk.Label(header_frame, text=welcome_text, font=("Arial", 14, "bold"))
+        welcome_label.pack(side=tk.LEFT, padx=10, pady=10)
 
-        # --- Navigation Buttons ---
-        inventory_button = TooltipButton(nav_frame, text="Inventory (Ctrl+I)", command=self.app_controller.show_inventory_view, tooltip_text="Open Inventory View (Ctrl+I)")
+        # Navigation buttons in the header
+        nav_frame = ttk.Frame(header_frame)
+        nav_frame.pack(side=tk.RIGHT, padx=10, pady=10)
+
+        inventory_button = TooltipButton(nav_frame, text="Inventory", command=self.app_controller.show_inventory_view, tooltip_text="Manage Products (Ctrl+I)")
         inventory_button.pack(side=tk.LEFT, padx=5)
 
-        sales_button = TooltipButton(nav_frame, text="Sales (Ctrl+S)", command=self.app_controller.show_sales_view, tooltip_text="Open Sales View (Ctrl+S)")
+        sales_button = TooltipButton(nav_frame, text="Sales", command=self.app_controller.show_sales_view, tooltip_text="New Sale (Ctrl+S)")
         sales_button.pack(side=tk.LEFT, padx=5)
 
-        orders_button = TooltipButton(nav_frame, text="Orders (Ctrl+O)", command=self.app_controller.show_order_view, tooltip_text="Open Order View (Ctrl+O)")
+        orders_button = TooltipButton(nav_frame, text="Orders", command=self.app_controller.show_order_view, tooltip_text="Manage Orders (Ctrl+O)")
         orders_button.pack(side=tk.LEFT, padx=5)
+
+        reports_button = TooltipButton(nav_frame, text="Reports", command=self.app_controller.show_reports_view, tooltip_text="View Reports (Ctrl+R)")
+        reports_button.pack(side=tk.LEFT, padx=5)
+
+        if self.user_info['role'] == 'Admin':
+            users_button = TooltipButton(nav_frame, text="Users", command=self.show_user_management_view, tooltip_text="Manage Users")
+            users_button.pack(side=tk.LEFT, padx=5)
 
         if self.user_info['role'] == 'Viewer':
             sales_button.configure(state=tk.DISABLED)
             orders_button.configure(state=tk.DISABLED)
 
-        reports_button = TooltipButton(nav_frame, text="Reports (Ctrl+R)", command=self.app_controller.show_reports_view, tooltip_text="Open Reports View (Ctrl+R)")
-        reports_button.pack(side=tk.LEFT, padx=5)
-
-        # Add User Management button only for Admins
-        if self.user_info['role'] == 'Admin':
-            users_button = TooltipButton(nav_frame, text="User Management", command=self.show_user_management_view, tooltip_text="Manage users")
-            users_button.pack(side=tk.LEFT, padx=5)
-
-        help_button = TooltipButton(nav_frame, text="Help (Ctrl+H)", command=self.app_controller.show_help_window, tooltip_text="Show Help (Ctrl+H)")
+        help_button = TooltipButton(nav_frame, text="Help", command=self.app_controller.show_help_window, tooltip_text="Get Help (Ctrl+H)")
         help_button.pack(side=tk.LEFT, padx=5)
 
-        logout_button = TooltipButton(nav_frame, text="Logout (Ctrl+L)", command=self.logout, tooltip_text="Logout (Ctrl+L)")
-        logout_button.pack(side=tk.RIGHT, padx=5)
+        logout_button = TooltipButton(nav_frame, text="Logout", command=self.logout, tooltip_text="Logout (Ctrl+L)")
+        logout_button.pack(side=tk.LEFT, padx=5)
+
+        # Main content area
+        main_content = ttk.Frame(self, style="Card.TFrame", padding=10)
+        main_content.pack(fill=tk.BOTH, expand=True, padx=10, pady=(0, 10))
+        main_content.grid_columnconfigure((0, 1, 2), weight=1)
+        main_content.grid_rowconfigure(0, weight=1)
+
+        # --- Statistics Frames ---
+        stats_frame = main_content
 
         # --- Statistics Frames ---
         stats_frame.grid_columnconfigure(0, weight=1)

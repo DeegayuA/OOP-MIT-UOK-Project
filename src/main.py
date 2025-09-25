@@ -13,7 +13,7 @@ from gui.help_window import HelpWindow
 
 class App(ThemedTk):
     def __init__(self):
-        super().__init__() 
+        super().__init__(theme="radiance")
         self.title("Inventory and Sales Management System")
         self.minsize(400, 300)
         self.protocol("WM_DELETE_WINDOW", self.on_closing)
@@ -28,6 +28,7 @@ class App(ThemedTk):
     def configure_styles(self):
         style = ttk.Style()
         style.configure("Hover.TButton", relief="solid")
+        style.configure("Card.TFrame", relief="raised", borderwidth=2)
 
     def fade_in_window(self, window):
         window.attributes("-alpha", 0.0)
@@ -36,12 +37,33 @@ class App(ThemedTk):
 
         def animate():
             elapsed = time.time() - start_time
-            alpha = min(elapsed / 0.2, 1.0) # 200ms fade-in
+            alpha = min(elapsed / 0.3, 1.0) # 300ms fade-in
             window.attributes("-alpha", alpha)
             if alpha < 1.0:
                 self.after(10, animate)
 
         self.after(10, animate)
+
+    def fade_out_and_switch(self, switch_function):
+        if not self.current_frame:
+            switch_function()
+            return
+
+        start_time = time.time()
+
+        def animate():
+            elapsed = time.time() - start_time
+            alpha = max(1.0 - (elapsed / 0.2), 0.0) # 200ms fade-out
+            self.attributes("-alpha", alpha)
+            if alpha > 0.0:
+                self.after(10, animate)
+            else:
+                if self.current_frame:
+                    self.current_frame.destroy()
+                switch_function()
+                self.fade_in_window(self)
+
+        animate()
 
     def setup_shortcuts(self):
         self.bind("<Control-n>", lambda event: self.handle_new_item_shortcut())
@@ -78,13 +100,13 @@ class App(ThemedTk):
 
     def show_login_frame(self):
         """Shows the login frame in the main window."""
-        if self.current_frame:
-            self.current_frame.destroy()
+        def _switch():
+            self.title("User Login")
+            self.center_window(400, 300)
+            self.current_frame = LoginFrame(self, on_success=self.on_login_success)
+            self.current_frame.pack(expand=True)
 
-        self.title("User Login")
-        self.center_window(400, 300)
-        self.current_frame = LoginFrame(self, on_success=self.on_login_success)
-        self.current_frame.pack(expand=True)
+        self.fade_out_and_switch(_switch)
 
     def on_login_success(self, user_info):
         """Callback function for when login is successful."""
@@ -93,55 +115,45 @@ class App(ThemedTk):
 
     def show_main_dashboard(self):
         """Shows the main dashboard view."""
-        if self.current_frame:
-            self.current_frame.destroy()
-
-        self.title("Main Dashboard")
-        self.center_window(1000, 600)
-        self.current_frame = MainWindow(self, self.current_user, app_controller=self)
-        self.current_frame.pack(fill=tk.BOTH, expand=True)
-        self.current_frame.update_stats() # Ensure stats are fresh
-        self.fade_in_window(self)
+        def _switch():
+            self.title("Main Dashboard")
+            self.center_window(1000, 600)
+            self.current_frame = MainWindow(self, self.current_user, app_controller=self)
+            self.current_frame.pack(fill=tk.BOTH, expand=True)
+            self.current_frame.update_stats()
+        self.fade_out_and_switch(_switch)
 
     def show_inventory_view(self):
         """Shows the inventory management view."""
-        if self.current_frame:
-            self.current_frame.destroy()
-
-        self.title("Inventory Management")
-        self.current_frame = InventoryView(self, self.current_user, app_controller=self)
-        self.current_frame.pack(fill=tk.BOTH, expand=True)
-        self.fade_in_window(self)
+        def _switch():
+            self.title("Inventory Management")
+            self.current_frame = InventoryView(self, self.current_user, app_controller=self)
+            self.current_frame.pack(fill=tk.BOTH, expand=True)
+        self.fade_out_and_switch(_switch)
 
     def show_sales_view(self):
         """Shows the sales view."""
-        if self.current_frame:
-            self.current_frame.destroy()
-
-        self.title("New Sale")
-        self.current_frame = SalesView(self, self.current_user, app_controller=self)
-        self.current_frame.pack(fill=tk.BOTH, expand=True)
-        self.fade_in_window(self)
+        def _switch():
+            self.title("New Sale")
+            self.current_frame = SalesView(self, self.current_user, app_controller=self)
+            self.current_frame.pack(fill=tk.BOTH, expand=True)
+        self.fade_out_and_switch(_switch)
 
     def show_order_view(self):
         """Shows the order management view."""
-        if self.current_frame:
-            self.current_frame.destroy()
-
-        self.title("Order Management")
-        self.current_frame = OrderView(self, self.current_user, app_controller=self)
-        self.current_frame.pack(fill=tk.BOTH, expand=True)
-        self.fade_in_window(self)
+        def _switch():
+            self.title("Order Management")
+            self.current_frame = OrderView(self, self.current_user, app_controller=self)
+            self.current_frame.pack(fill=tk.BOTH, expand=True)
+        self.fade_out_and_switch(_switch)
 
     def show_reports_view(self):
         """Shows the reports view."""
-        if self.current_frame:
-            self.current_frame.destroy()
-
-        self.title("Reports")
-        self.current_frame = ReportsView(self, self.current_user, app_controller=self)
-        self.current_frame.pack(fill=tk.BOTH, expand=True)
-        self.fade_in_window(self)
+        def _switch():
+            self.title("Reports")
+            self.current_frame = ReportsView(self, self.current_user, app_controller=self)
+            self.current_frame.pack(fill=tk.BOTH, expand=True)
+        self.fade_out_and_switch(_switch)
 
     def change_theme(self, theme_name):
         """Changes the application's theme."""
