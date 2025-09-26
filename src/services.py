@@ -321,6 +321,28 @@ def get_product_performance_report(start_date, end_date):
     finally:
         conn.close()
 
+def get_recent_sales(limit=5):
+    """
+    Retrieves the most recent sales records.
+    """
+    conn = get_db_connection()
+    try:
+        cursor = conn.execute("""
+            SELECT
+                s.sale_id,
+                s.sale_date,
+                c.name as customer_name,
+                s.total_amount
+            FROM sales s
+            LEFT JOIN customers c ON s.customer_id = c.customer_id
+            ORDER BY s.sale_date DESC
+            LIMIT ?
+        """, (limit,))
+        sales = cursor.fetchall()
+        return [dict(row) for row in sales]
+    finally:
+        conn.close()
+
 def get_sales_report(start_date, end_date):
     """
     Retrieves sales data for a given date range, including cashier and customer names.

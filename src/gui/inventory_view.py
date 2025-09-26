@@ -11,6 +11,7 @@ class InventoryView(BaseWindow):
         super().__init__(parent)
         self.user_info = user_info
         self.app_controller = app_controller
+        self._search_job = None
 
         self.create_widgets()
         self.refresh_products()
@@ -100,12 +101,15 @@ class InventoryView(BaseWindow):
         self.filter_products()
 
     def filter_products(self, event=None):
+        if self._search_job:
+            self.after_cancel(self._search_job)
+        self._search_job = self.after(300, self._perform_filter)
+
+    def _perform_filter(self):
         search_term = self.product_search_var.get().lower()
 
-        for i in self.products_tree.get_children():
-            self.products_tree.delete(i)
-        for i in self.batches_tree.get_children():
-            self.batches_tree.delete(i)
+        self.products_tree.delete(*self.products_tree.get_children())
+        self.batches_tree.delete(*self.batches_tree.get_children())
 
         for p in self.all_products:
             if search_term in p['name'].lower() or search_term in p['category'].lower():
