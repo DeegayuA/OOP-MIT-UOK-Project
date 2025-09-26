@@ -237,3 +237,6 @@ class MainWindow(tk.Frame):
     def show_not_implemented(self):
         """Shows a 'Feature not implemented' message."""
         messagebox.showinfo("Info", "This feature is not yet implemented.")
+
+
+
