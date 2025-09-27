@@ -6,7 +6,7 @@ from gui.widgets.datepicker import create_datepicker_entry
 from gui.widgets.tooltip_button import TooltipButton
 from datetime import date, timedelta
 
-class InventoryView(BaseWindow):
+class InventoryView(tk.Frame):
     def __init__(self, parent, user_info, app_controller):
         super().__init__(parent)
         self.user_info = user_info
