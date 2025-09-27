@@ -382,6 +382,31 @@ def get_all_customers():
     finally:
         conn.close()
 
+
+def add_customer(name, phone, address):
+    """Adds a new customer to the database and returns the new customer object."""
+    conn = get_db_connection()
+    try:
+        # Combine phone and address into a single contact_info string
+        contact_info = f"Phone: {phone}, Address: {address}"
+        cursor = conn.cursor()
+        cursor.execute(
+            "INSERT INTO customers (name, contact_info) VALUES (?, ?)",
+            (name, contact_info)
+        )
+        new_customer_id = cursor.lastrowid
+        conn.commit()
+        return {
+            'customer_id': new_customer_id,
+            'name': name,
+            'contact_info': contact_info
+        }
+    except Exception as e:
+        conn.rollback()
+        raise e
+    finally:
+        conn.close()
+
 def get_products_for_sale():
     """
     Retrieves all products that are available for sale, including total stock.
