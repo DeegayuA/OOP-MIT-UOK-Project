@@ -141,7 +141,8 @@ class SalesView(tk.Frame):
             return
 
         item_values = self.products_tree.item(selected_item[0])['values']
-        product_id, name, price_str = item_values
+        # Unpack all values, ignoring the last one (stock)
+        product_id, name, price_str, _ = item_values
         price = float(price_str.replace(" LKR", "").replace(",", ""))
 
         quantity = simpledialog.askinteger("Quantity", f"Enter quantity for {name}:", parent=self, minvalue=1)

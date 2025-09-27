@@ -16,7 +16,7 @@ class OrderView(tk.Frame):
 
     def bind_shortcuts(self):
         self.bind("<Control-n>", lambda event: self.create_new_order())
-        self.bind("<Control-u>", lambda event: self.update_status())
+        # Shortcuts for status updates are now bound directly in create_widgets
         self.bind("<Escape>", lambda event: self.app_controller.show_main_dashboard())
 
     def create_widgets(self):
@@ -45,19 +45,29 @@ class OrderView(tk.Frame):
         new_order_button = TooltipButton(button_frame, text="New Order (Ctrl+N)", command=self.create_new_order)
         new_order_button.pack(side=tk.LEFT, padx=5)
 
-        update_status_frame = ttk.Frame(button_frame)
-        update_status_frame.pack(side=tk.LEFT, padx=10)
-        self.status_var = tk.StringVar()
-        status_menu = ttk.Combobox(update_status_frame, textvariable=self.status_var, state="readonly",
-                                    values=['Received', 'Ready to Pack', 'Ready to Distribute', 'Completed'])
-        status_menu.pack(side=tk.LEFT)
-        update_status_button = TooltipButton(update_status_frame, text="Update Status (Ctrl+U)", command=self.update_status)
-        update_status_button.pack(side=tk.LEFT, padx=5)
+        status_button_frame = ttk.Frame(button_frame)
+        status_button_frame.pack(side=tk.LEFT, padx=10)
+
+        # Create a button for each status
+        self.status_buttons = {}
+        statuses = ['Received', 'Ready to Pack', 'Ready to Distribute', 'Completed']
+        for i, status in enumerate(statuses):
+            # The command uses a lambda with a default argument to capture the current status
+            btn = TooltipButton(
+                status_button_frame,
+                text=f"{status} (Ctrl+{i+1})",
+                command=lambda s=status: self._update_status(s)
+            )
+            btn.pack(side=tk.LEFT, padx=5)
+            self.status_buttons[status] = btn
+            # Bind the shortcut to the main frame
+            self.bind_all(f"<Control-{i+1}>", lambda event, s=status: self._update_status(s))
+
 
         if self.user_info['role'] in ['Viewer', 'Seller']:
             new_order_button.configure(state=tk.DISABLED)
-            update_status_button.configure(state=tk.DISABLED)
-            status_menu.configure(state=tk.DISABLED)
+            for btn in self.status_buttons.values():
+                btn.configure(state=tk.DISABLED)
 
         TooltipButton(button_frame, text="Back (Esc)", command=self.app_controller.show_main_dashboard).pack(side=tk.RIGHT, padx=5)
 
@@ -77,23 +87,29 @@ class OrderView(tk.Frame):
                 display_name = o['customer_name'] if o['customer_name'] else "N/A"
                 self.orders_tree.insert("", tk.END, values=(o['order_id'], display_name, o['order_date'], o['status']))
 
-    def update_status(self):
+    def _update_status(self, new_status):
+        """Helper function to update the status of the selected order."""
         selected_item = self.orders_tree.selection()
         if not selected_item:
             messagebox.showwarning("Selection Error", "Please select an order to update.")
             return
 
-        new_status = self.status_var.get()
-        if not new_status:
-            messagebox.showwarning("Input Error", "Please select a status from the dropdown.")
-            return
-
         order_id = self.orders_tree.item(selected_item[0])['values'][0]
+        current_status = self.orders_tree.item(selected_item[0])['values'][3]
+
+        if new_status == current_status:
+            return # No change, do nothing
 
         try:
             services.update_order_status(order_id, new_status)
-            messagebox.showinfo("Success", "Order status updated successfully.")
+            # No success message to keep the workflow fast
             self.refresh_data()
+            # Try to re-select the item
+            for item in self.orders_tree.get_children():
+                if self.orders_tree.item(item)['values'][0] == order_id:
+                    self.orders_tree.selection_set(item)
+                    self.orders_tree.focus(item)
+                    break
         except Exception as e:
             messagebox.showerror("Error", f"Failed to update status: {e}")
 
@@ -116,11 +132,38 @@ class CreateOrderWindow(BaseWindow):
         self.geometry("600x400")
         self.result = None
         self.cart = []
-        self.customers = services.get_all_customers()
+        self.customers = [] # Initialize empty
         self.products = services.get_all_products() # Get all products for ordering
         self.create_widgets()
         self.filter_products()
         self.center_window()
+
+    def update_customer_list(self, select_customer_name=None):
+        """Refreshes the customer list in the combobox."""
+        self.customers = services.get_all_customers()
+        customer_names = [c['name'] for c in self.customers]
+        self.customer_menu['values'] = customer_names
+        if select_customer_name and select_customer_name in customer_names:
+            self.customer_var.set(select_customer_name)
+        elif customer_names:
+            self.customer_var.set(customer_names[0])
+        else:
+            self.customer_var.set("")
+
+    def _add_new_customer(self):
+        """Opens a dialog to add a new customer."""
+        dialog = AddNewCustomerDialog(self)
+        self.wait_window(dialog)
+
+        if dialog.result:
+            try:
+                # Add customer via services
+                new_customer = services.add_customer(dialog.result['name'], dialog.result['phone'], dialog.result['address'])
+                messagebox.showinfo("Success", f"Customer '{new_customer['name']}' added successfully.", parent=self)
+                # Refresh the customer list and select the new one
+                self.update_customer_list(select_customer_name=new_customer['name'])
+            except Exception as e:
+                messagebox.showerror("Error", f"Failed to add customer: {e}", parent=self)
 
     def create_widgets(self):
         top_frame = ttk.Frame(self, padding=10)
@@ -131,10 +174,12 @@ class CreateOrderWindow(BaseWindow):
         # Customer selection
         ttk.Label(top_frame, text="Customer:").pack(side=tk.LEFT)
         self.customer_var = tk.StringVar()
-        customer_names = [c['name'] for c in self.customers]
-        self.customer_menu = ttk.Combobox(top_frame, textvariable=self.customer_var, values=customer_names, state="readonly")
+        self.customer_menu = ttk.Combobox(top_frame, textvariable=self.customer_var, state="readonly")
         self.customer_menu.pack(side=tk.LEFT, padx=5)
         self.customer_menu.focus_set()
+        self.update_customer_list() # Populate the list initially
+
+        TooltipButton(top_frame, text="New Customer...", command=self._add_new_customer).pack(side=tk.LEFT)
 
         # Product selection and cart
         product_frame = ttk.LabelFrame(middle_frame, text="Add Products")
@@ -244,5 +289,65 @@ class CreateOrderWindow(BaseWindow):
             return
 
         customer = next((c for c in self.customers if c['name'] == customer_name), None)
+        if not customer:
+            messagebox.showerror("Validation Error", "Selected customer not found. Please refresh.")
+            return
         self.result = {'customer_id': customer['customer_id'], 'items': self.cart}
+        self.destroy()
+
+
+class AddNewCustomerDialog(BaseWindow):
+    """A dialog for adding a new customer."""
+    def __init__(self, parent):
+        super().__init__(parent)
+        self.title("Add New Customer")
+        self.geometry("350x200")
+        self.result = None
+
+        self.name_var = tk.StringVar()
+        self.phone_var = tk.StringVar()
+        self.address_var = tk.StringVar()
+
+        self.create_widgets()
+        self.center_window()
+        # Make the dialog modal
+        self.transient(parent)
+        self.grab_set()
+
+    def create_widgets(self):
+        form_frame = ttk.Frame(self, padding="10")
+        form_frame.pack(fill=tk.BOTH, expand=True)
+
+        ttk.Label(form_frame, text="Name:").grid(row=0, column=0, sticky=tk.W, pady=5)
+        name_entry = ttk.Entry(form_frame, textvariable=self.name_var)
+        name_entry.grid(row=0, column=1, sticky=tk.EW, pady=5)
+        name_entry.focus_set() # Focus on the name field first
+
+        ttk.Label(form_frame, text="Phone:").grid(row=1, column=0, sticky=tk.W, pady=5)
+        ttk.Entry(form_frame, textvariable=self.phone_var).grid(row=1, column=1, sticky=tk.EW, pady=5)
+
+        ttk.Label(form_frame, text="Address:").grid(row=2, column=0, sticky=tk.W, pady=5)
+        ttk.Entry(form_frame, textvariable=self.address_var).grid(row=2, column=1, sticky=tk.EW, pady=5)
+
+        form_frame.columnconfigure(1, weight=1)
+
+        button_frame = ttk.Frame(self, padding=(10, 0, 10, 10))
+        button_frame.pack(fill=tk.X)
+
+        ttk.Button(button_frame, text="Save", command=self.on_save).pack(side=tk.RIGHT, padx=5)
+        ttk.Button(button_frame, text="Cancel", command=self.destroy).pack(side=tk.RIGHT)
+
+        self.bind("<Return>", lambda event: self.on_save())
+        self.bind("<Escape>", lambda event: self.destroy())
+
+    def on_save(self):
+        name = self.name_var.get().strip()
+        phone = self.phone_var.get().strip()
+        address = self.address_var.get().strip()
+
+        if not name:
+            messagebox.showerror("Validation Error", "Customer name is required.", parent=self)
+            return
+
+        self.result = {"name": name, "phone": phone, "address": address}
         self.destroy()
